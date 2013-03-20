@@ -11,14 +11,14 @@ Note: You CAN use any pin, if you do not rely on Timer0 related things.
       This sketch uses delay() so we need to steer clear of Timer0.
 
 Leonardo
-  use SQUAWK_PWM_PIN5 (it's on timer3)
+  use SQUAWK_PWM_PIN5 (it's on Timer3)
   
 Uno, Due(milanove), Diecimila, Nano, Mini or LilyPad
   use SQUAWK_PWM_PIN11
-  or  SQUAWK_PWM_PIN3 (both are on timer2)
+  or  SQUAWK_PWM_PIN3 (both are on Timer2)
   
 Others
-  not yet supported, you'll have to try and see ;)
+  not yet supported, you'll have to try and see what happens ;)
 */
 
 // Configure Squawk for PWM output, and construct suitable ISR
@@ -33,7 +33,7 @@ extern const uint8_t melody_data[];
 
 void setup() {
   // Set up Squawk to generate samples at 44.1kHz
-  // Squawk steals Timer1 for sample crunching
+  // Squawk always steals Timer1 for sample crunching
   Squawk.begin(44100);
   // Begin playback of melody_data
   Squawk.play(melody_data);
