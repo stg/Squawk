@@ -292,7 +292,7 @@ void SquawkSynth::advance() {
   if(deconstruct) {
     const uint8_t *p_data;
     uint8_t data;
-    p_data = &p_play[32 + (pgm_read_byte(&p_play[1 + ix_order]) << 8) + (ix_row << 2)];
+    p_data = &p_play[32 + ((pgm_read_byte(&p_play[1 + ix_order]) << 6) + ix_row) * 9];
     data = pgm_read_byte(  p_data); cel[0].fxc  =  data << 0x04;
                                     cel[1].fxc  =  data &  0xF0;
     data = pgm_read_byte(++p_data); cel[0].fxp  =  data;
@@ -301,13 +301,16 @@ void SquawkSynth::advance() {
                                     cel[3].fxc  =  data &  0xF0;
     data = pgm_read_byte(++p_data); cel[2].fxp  =  data;
     data = pgm_read_byte(++p_data); cel[3].fxp  =  data;
-    data = pgm_read_byte(++p_data); cel[0].ixp  =  data >> 0x03;
-                                    cel[1].ixp  = (data << 0x02) & 0x1F;
-    data = pgm_read_byte(++p_data); cel[1].ixp |= (data >> 0x06);
-                                    cel[2].ixp  = (data >> 0x01) & 0x1F;
-                                    cel[3].ixp  = (data &  0x01) ? 0x00 : 0x1F;
+    data = pgm_read_byte(++p_data); cel[0].ixp  =  data;
+    data = pgm_read_byte(++p_data); cel[1].ixp  =  data;
+    data = pgm_read_byte(++p_data); cel[2].ixp  =  data & 0x3F;
+                                    cel[3].ixp  = (data &  0x80) ? 0x00 : 0x3F;
+    if(cel[0].fxc == 0xE0) { cel[0].fxc |= cel[0].fxp >> 4; cel[0].fxp &= 0x0F; }
+    if(cel[1].fxc == 0xE0) { cel[1].fxc |= cel[1].fxp >> 4; cel[1].fxp &= 0x0F; }
+    if(cel[2].fxc == 0xE0) { cel[2].fxc |= cel[2].fxp >> 4; cel[2].fxp &= 0x0F; }
+    if(cel[3].fxc == 0xE0) { cel[3].fxc |= cel[3].fxp >> 4; cel[3].fxp &= 0x0F; }
   }
-
+  
   // Quick pointer access
   fxm_t        *p_fxm = fxm;
   oscillator_t *p_osc = osc;
