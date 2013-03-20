@@ -42,6 +42,27 @@ public:
 
 extern SquawkSynth Squawk;
 
+// oscillator structure
+typedef struct {
+  uint8_t  vol;
+  uint16_t freq;
+  uint16_t phase;
+} Oscillator;
+
+// oscillator memory
+extern Oscillator osc[4];
+// channel 0 is pulse wave
+//    waveform has 25% duty
+// channel 1 is pulse wave
+//    waveform has 50% duty = square wave
+// channel 2 is triangle wave
+//    .vol is disregarded, always plays at full volume
+// channel 3 is noise
+//    .freq & .phase are used as a LFSR, should not be changed
+
+// LFSR: Linear feedback shift register, a method of producing
+// a pseudo-random bit sequence. Used to generate nasty noise.
+
 #ifdef __AVR_ATmega32U4__
 // Supported configurations for ATmega32U4
 #define SQUAWK_PWM_PIN5  OCR3AL
@@ -77,27 +98,6 @@ extern SquawkSynth Squawk;
 #define SQUAWK_RLD_PORTB PORTB
 #define SQUAWK_RLD_PORTC PORTC
 */
-
-// oscillator structure
-typedef struct {
-  uint8_t  vol;
-  uint16_t freq;
-  uint16_t phase;
-} Oscillator;
-
-// oscillator memory
-extern Oscillator osc[4];
-// channel 0 is pulse wave
-//    waveform has 25% duty
-// channel 1 is pulse wave
-//    waveform has 50% duty = square wave
-// channel 2 is triangle wave
-//    .vol is disregarded, always plays at full volume
-// channel 3 is noise
-//    .freq & .phase are used as a LFSR, should not be changed
-
-// LFSR: Linear feedback shift register, a method of producing
-// a pseudo-random bit sequence. Used to generate nasty noise.
 
 // SAMPLE CRUNCHER
 // generates samples and updates oscillators
