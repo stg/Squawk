@@ -1,3 +1,5 @@
+/* === SQUAWK MELODY PLAYER EXAMPLE === */
+
 #include <Squawk.h>
 
 /*
@@ -21,33 +23,37 @@ Others
   not yet supported, you'll have to try and see what happens ;)
 */
 
-// Configure Squawk for PWM output, and construct suitable ISR
+// Configure Squawk for PWM output, and construct suitable ISR.
 //SQUAWK_CONSTRUCT_ISR(SQUAWK_PWM_PIN3)
 //SQUAWK_CONSTRUCT_ISR(SQUAWK_PWM_PIN5)
 //SQUAWK_CONSTRUCT_ISR(SQUAWK_PWM_PIN11)
 
-// Declare type of melody_data, so we can put it AFTER the code
+// Declare type of TheOriginalSquawk, so we can put it AFTER the code.
 // Using this declaration, you could also put the code in a separate .cpp
 // or .c file in the same folder as the sketch, for maximum cleanliness!
-extern const uint8_t melody_data[];
+extern Melody TheOriginalSquawk[];
 
+// Initialize Squawk
 void setup() {
-  // Set up Squawk to generate samples at 44.1kHz
-  // Squawk always steals Timer1 for sample crunching
+  // Set up Squawk to generate samples at 44.1kHz.
+  // Squawk always steals Timer1 for sample crunching.
   Squawk.begin(44100);
-  // Begin playback of melody_data
-  Squawk.play(melody_data);
+  // Begin playback of melody_data.
+  Squawk.play(TheOriginalSquawk);
+  // Tune squawk to a slightly higher frequency (default is 6.0).
+  // For this song, 8.0 seems suitable for playback on a small piezo.
+  Squawk.tune(8.0);
 }
 
 void loop() {
-  // It's up to the user to call Squawk.advance() periodically in order to
+  // It's up to the sketch to call Squawk.advance() periodically in order to
   // advance playback. We want to do this roughly 50 timer per second.
   Squawk.advance();
   delay(20);
 }
 
 // The Original Squawk by Philip Linde (7kB)
-const uint8_t melody_data[] PROGMEM = {
+Melody TheOriginalSquawk[] = {
   0x0E, 0x00, 0x01, 0x02, 0x03, 0x0A, 0x0B, 0x04, 0x05, 0x04, 0x08, 0x06, 0x07, 0x06, 0x09, 0x00,
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
   0xCC, 0x00, 0x00, 0xEF, 0x04, 0xC1, 0x3F, 0x3F, 0x8E, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x3F,

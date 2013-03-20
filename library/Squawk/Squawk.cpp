@@ -59,14 +59,14 @@ static float    tuning = 6.0;
 static const uint8_t *p_play;
 
 // Exports
-oscillator_t osc[4];
+Oscillator osc[4];
 
 // Imports
 extern intptr_t squawk_register;
 
 // ProTracker(+1 octave) period table
-static const uint16_t period_tbl[36] PROGMEM = {
-//  856, 808, 762, 720, 678, 640, 604, 570, 538, 508, 480, 453,
+static const uint16_t period_tbl[48] PROGMEM = {
+  856, 808, 762, 720, 678, 640, 604, 570, 538, 508, 480, 453,
   428, 404, 381, 360, 339, 320, 302, 285, 269, 254, 240, 226,
   214, 202, 190, 180, 170, 160, 151, 143, 135, 127, 120, 113,
   107, 101,  95,  90,  85,  80,  76,  71,  67,  64,  60,  57,
@@ -313,7 +313,7 @@ void SquawkSynth::advance() {
   
   // Quick pointer access
   fxm_t        *p_fxm = fxm;
-  oscillator_t *p_osc = osc;
+  Oscillator   *p_osc = osc;
   cell_t       *p_cel = cel;
 
   // Temps

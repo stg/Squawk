@@ -3,7 +3,8 @@
 #######################################
 
 SquawkSynth	KEYWORD1
-oscillator_t	KEYWORD1
+Oscillator	KEYWORD1
+Melody	KEYWORD1
 
 #######################################
 # Methods and Functions (KEYWORD2)

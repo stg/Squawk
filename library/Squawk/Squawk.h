@@ -9,6 +9,8 @@
 #include <inttypes.h>
 #include "Arduino.h"
 
+#define Melody const uint8_t PROGMEM
+
 class SquawkSynth {
 
 public:
@@ -81,10 +83,10 @@ typedef struct {
   uint8_t  vol;
   uint16_t freq;
   uint16_t phase;
-} oscillator_t;
+} Oscillator;
 
 // oscillator memory
-extern oscillator_t osc[4];
+extern Oscillator osc[4];
 // channel 0 is pulse wave
 //    waveform has 25% duty
 // channel 1 is pulse wave
@@ -177,10 +179,10 @@ ISR(TIMER1_COMPA_vect, ISR_NAKED) { \
     "reti                                             " "\n\t" \
     : \
     : [reg] "M" _SFR_MEM_ADDR(TARGET_REGISTER), \
-      [mul] "M" (sizeof(oscillator_t)), \
-      [pha] "M" (offsetof(oscillator_t, phase)), \
-      [fre] "M" (offsetof(oscillator_t, freq)), \
-      [vol] "M" (offsetof(oscillator_t, vol)) \
+      [mul] "M" (sizeof(Oscillator)), \
+      [pha] "M" (offsetof(Oscillator, phase)), \
+      [fre] "M" (offsetof(Oscillator, freq)), \
+      [vol] "M" (offsetof(Oscillator, vol)) \
   ); \
 }
 
