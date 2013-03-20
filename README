@@ -1,0 +1,36 @@
+Squawk is a minimalistic 8-bit software synthesizer & playroutine for Arduino
+
+Contributors:
+  Davey Taylor
+  Philip Linde
+
+Thanks to:
+  David Cuartielles
+  Linus Åkesson
+
+
+STEP 1
+
+Track your music using the template .mod file, in any ProTracker
+compatible tracker software such as [LINDE-examples].
+
+When tracking, follow a few simple rules:
+
+1) Only use instrument 1 in channel 1, 2 in channel 2 and so on
+2) Only use even numbers for all volume related commands
+3) Don't use advanced jumps (regular jumps are ok)
+4) Don't try to set tempo (speed is ok)
+5) Only use original ProTracker notes (octaves 1-3)
+
+
+STEP 2
+
+After tracking, convert your .mod file using the Squawkify.py mod-wrangler:
+
+[LINDE-instructions]
+
+
+STEP 3
+
+Copy the generated data into your sketch and you are ready to go!
+See sketches for examples on how to get things going.
