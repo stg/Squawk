@@ -1,0 +1,86 @@
+;ISR 3 + 105 = 108 cycles
+
+soundroutine:
+    push r18                       ; 2
+    push r17                       ; 2
+    push r16                       ; 2
+    push r8                        ; 2
+    push r5                        ; 2
+    push r0                        ; 2
+    in   r0, __SREG__              ; 1
+    
+    lds  r18, ch+0*c_size+c_freq   ; 2    oscillator 1 - setup
+    lds  r8, ch+0*c_size+c_phase   ; 2    essentially
+    add  r8, r18                   ; 1    phase += frequency
+    sts  ch+0*c_size+c_phase, r8   ; 2
+    lds  r18, ch+0*c_size+c_freq+1 ; 2
+    lds  r5, ch+0*c_size+c_phase+1 ; 2
+    adc  r5, r18                   ; 1
+    sts  ch+0*c_size+c_phase+1, r5 ; 2
+
+    mov  r17, r5                   ; 1    oscillator 1 - 25% pulse
+    lsl  r17                       ; 1
+    and  r17, r5                   ; 1
+    lds  r16, ch+0*c_size+c_vol    ; 2
+    sbrc r17, 7                    ; \_ 2
+    neg  r16                       ; /
+
+    lds  r18, ch+1*c_size+c_freq   ; 2    oscillator 2 - setup
+    lds  r8, ch+1*c_size+c_phase   ; 2    essentially
+    add  r8, r18                   ; 1    phase += frequency
+    sts  ch+1*c_size+c_phase, r8   ; 2
+    lds  r18, ch+1*c_size+c_freq+1 ; 2
+    lds  r5, ch+1*c_size+c_phase+1 ; 2
+    adc  r5, r18                   ; 1
+    sts  ch+1*c_size+c_phase+1, r5 ; 2
+
+    lds  r17, ch+1*c_size+c_vol    ; 2    oscillator 2 - 50% pulse
+    sbrc r5, 7                     ; \_ 2
+    neg  r17                       ; /
+    add  r16, r17                  ; 1
+
+    lds  r18, ch+2*c_size+c_freq   ; 2    oscillator 3 - setup
+    lds  r8, ch+2*c_size+c_phase   ; 2    essentially
+    add  r8, r18                   ; 1    phase += frequency
+    sts  ch+2*c_size+c_phase, r8   ; 2
+    lds  r18, ch+2*c_size+c_freq+1 ; 2
+    lds  r5, ch+2*c_size+c_phase+1 ; 2
+    adc  r5, r18                   ; 1
+    sts  ch+2*c_size+c_phase+1, r5 ; 2
+
+    mov  r17, r5                   ; 1    oscillator 3 - triangle
+    sbrc r17, 7                    ; \_ 2
+    com  r17                       ; /
+    lsr  r17                       ; 1
+    add  r16, r17                  ; 1
+
+    ldi  r17, 1                    ; 1    oscillator 4 - setup
+    lds  r8, ch+3*c_size+c_freq    ; 2    essentially
+    lds  r5, ch+3*c_size+c_freq+1  ; 2    linear feedback shift register
+    add  r8, r8                    ; 1
+    adc  r5, r5                    ; 1
+    sbrc r5, 7                     ; \_ 2
+    eor  r8, r17                   ; /
+    sbrc r5, 6                     ; \_ 2
+    eor  r8, r17                   ; /
+    sts  ch+3*c_size+c_freq, r8    ; 2
+    sts  ch+3*c_size+c_freq+1, r5  ; 2
+
+    lds  r17, noisevolume          ; 2    oscillator 4 - 1bit noise
+    sbrc r5, 7                     ; \_ 2
+    neg  r17                       ; /
+    add  r16, r17                  ; 1
+
+    subi r16, 32+64+128            ; 1    correct offset
+;    out  OCR0A, r16                ; 1    pwm output
+    sts  OCR3AL, r16
+                                   
+    in   r0, __SREG__              ; 1
+    pop  r0                        ; 3
+    pop  r5                        ; 2
+    pop  r8                        ; 2
+    pop  r16                       ; 2
+    pop  r17                       ; 2
+    pop  r18                       ; 2
+                                   
+    reti                           ; 4
