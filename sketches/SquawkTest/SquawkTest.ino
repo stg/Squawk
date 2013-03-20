@@ -7,12 +7,15 @@ needs to reconfigure the timer for higher-speed, which modifies how these
 Arduino internals behave. Uncomment the correct line below, depending on
 which Arduino you intend to run the code on.
 
+Note: You CAN use any pin, if you do not rely on Timer0 related things.
+      This sketch uses delay() so we need to steer clear of Timer0.
+
 Leonardo
-  use SQUAWK_PWM_PIN5
+  use SQUAWK_PWM_PIN5 (it's on timer3)
   
 Uno, Due(milanove), Diecimila, Nano, Mini or LilyPad
   use SQUAWK_PWM_PIN11
-  or  SQUAWK_PWM_PIN3
+  or  SQUAWK_PWM_PIN3 (both are on timer2)
   
 Others
   not yet supported, you'll have to try and see ;)
