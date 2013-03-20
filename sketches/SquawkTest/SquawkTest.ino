@@ -1,10 +1,31 @@
 #include <Squawk.h>
 
-// Configure Squawk for PWM output at pin 5, and construct suitable ISR
-// Pin 5 will reconfigure Timer3 on an ATmega32U4 or Timer0 on ATmega168/328P
-SQUAWK_CONSTRUCT_ISR(SQUAWK_PWM_PIN11)
+/*
+Since Timer0 is used for Arduino functionality, such as delay() it is not
+recommended to use a pin that relies on this timer for output, as Squawk
+needs to reconfigure the timer for higher-speed, which modifies how these
+Arduino internals behave. Uncomment the correct line below, depending on
+which Arduino you intend to run the code on.
+
+Leonardo
+  use SQUAWK_PWM_PIN5
+  
+Uno, Due(milanove), Diecimila, Nano, Mini or LilyPad
+  use SQUAWK_PWM_PIN11
+  or  SQUAWK_PWM_PIN3
+  
+Others
+  not yet supported, you'll have to try and see ;)
+*/
+
+// Configure Squawk for PWM output, and construct suitable ISR
+//SQUAWK_CONSTRUCT_ISR(SQUAWK_PWM_PIN3)
+//SQUAWK_CONSTRUCT_ISR(SQUAWK_PWM_PIN5)
+//SQUAWK_CONSTRUCT_ISR(SQUAWK_PWM_PIN11)
 
 // Declare type of melody_data, so we can put it AFTER the code
+// Using this declaration, you could also put the code in a separate .cpp
+// or .c file in the same folder as the sketch, for maximum cleanliness!
 extern const uint8_t melody_data[];
 
 void setup() {
@@ -22,6 +43,7 @@ void loop() {
   delay(20);
 }
 
+// The Original Squawk by Philip Linde
 const uint8_t melody_data[] PROGMEM = {
   0x0E, 0x01, 0x02, 0x03, 0x0A, 0x0B, 0x04, 0x05, 0x04, 0x08, 0x06, 0x07, 0x06, 0x09, 0x00, 0x00,
   0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
