@@ -16,7 +16,7 @@ compatible tracker software such as [LINDE-examples].
 
 When tracking, follow a few simple rules:
 
-1) Only use instrument 1 in channel 1, 2 in channel 2 and so on
+1) Only use instrument 1 in channel 1, 2 in channel 2 and so on [LINDE-correct?]
 2) Only use even numbers for all volume related commands
 3) Don't use advanced jumps (regular jumps are ok)
 4) Don't try to set tempo (speed is ok)
