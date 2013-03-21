@@ -1,12 +1,11 @@
 Squawk is a minimalistic 8-bit software synthesizer & playroutine for Arduino
 
 Contributors:
-  Davey Taylor
-  Philip Linde
+  Philip Linde - python scripts, music
+  Davey Taylor - the rest
 
 Thanks to:
-  David Cuartielles
-  Linus Åkesson
+  David Cuartielles, Linus Åkesson
 
 
 STEP 1
