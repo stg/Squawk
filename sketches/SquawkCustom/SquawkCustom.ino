@@ -51,7 +51,7 @@ void playNote(byte period, word length, char modifier) {
 
 // A tiny custom play-routine that plays a string containing
 // notations for notes, delays and lengths
-void customPlay(char *playthis) {
+void customPlay(char playthis[]) {
   // Find length of play string
   word length = strlen(playthis);
   // Set the default note time

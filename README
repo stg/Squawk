@@ -19,13 +19,13 @@ When tracking, follow a few simple rules:
 2) Only use even numbers for all volume related commands
 3) Don't use advanced jumps (regular jumps are ok)
 4) Don't try to set tempo (speed is ok)
-5) Only use original ProTracker notes (octaves 1-3)
+5) Only use notes in octaves 3-6
 6) Put no more than 31 patterns in your order list
 
 
 STEP 2
 
-After tracking, convert your .mod file using the Squawkify.py mod-wrangler:
+After tracking, convert your .mod file using the converter/squawkify.py script:
 
 [LINDE-instructions]
 

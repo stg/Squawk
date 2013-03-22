@@ -54,7 +54,7 @@ static cell_t   cel[4];
 static bool     deconstruct;
 static uint32_t tuning_long;
 static uint16_t sample_rate;
-static float    tuning = 6.0;
+static float    tuning = 1.0;
 
 static const uint8_t *p_play;
 
@@ -151,7 +151,7 @@ static void playroutine_reset() {
 // Tunes Squawk to a different frequency
 void SquawkSynth::tune(float new_tuning) {
   tuning = new_tuning;
-  tuning_long = (long)((double)sample_rate * (double)tuning);
+	tuning_long = (long)(((double)14676852736.0 / (double)sample_rate) * (double)tuning);
 }
 
 // Initializes Squawk
@@ -160,7 +160,7 @@ void SquawkSynth::begin(uint16_t hz) {
   word isr_rr;
 
   sample_rate = hz;
-  tuning_long = (long)((double)sample_rate * (double)tuning);
+	tuning_long = (long)(((double)14676852736.0 / (double)sample_rate) * (double)tuning);
 
   if(squawk_register == (intptr_t)&OCR0A) {
     // Squawk uses PWM on OCR0A/PD5(ATMega328/168)/PB7(ATMega32U4)

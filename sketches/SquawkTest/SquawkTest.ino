@@ -40,9 +40,6 @@ void setup() {
   Squawk.begin(44100);
   // Begin playback of melody_data.
   Squawk.play(TheOriginalSquawk);
-  // Tune squawk to a slightly higher frequency (default is 6.0).
-  // For this song, 8.0 seems suitable for playback on a small piezo.
-  Squawk.tune(8.0);
 }
 
 void loop() {
