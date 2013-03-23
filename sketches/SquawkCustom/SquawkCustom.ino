@@ -35,6 +35,8 @@ void setup() {
   Squawk.begin(44100);
   // Begin playback.
   Squawk.play();
+  //
+  osc[2].vol = 0x7F;
 }
 
 // Plays note using oscillator 2 (triangle with no volume control)
@@ -42,7 +44,7 @@ void playNote(byte period, word length, char modifier) {
   // Modifier . makes note length 2/3
   if(modifier == '.') length = (length * 2) / 3;
   // Set up the play frequency, 352800 is [sample_rate]=44100 * [tuning]=8.0
-  osc[2].freq = 352800 / period;
+  if(period != 0) osc[2].freq = 352800 / period;
   // Delay, silence, delay
   delay(length);
   osc[2].freq = 0;
