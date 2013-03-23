@@ -15,7 +15,6 @@
 #define MIN(A, B) ((A) < (B) ? (A) : (B))
 #define MAX(A, B) ((A) > (B) ? (A) : (B))
 #define FREQ(PERIOD) (tuning_long / PERIOD)
-#define SET_VOL(X) if(ch != 2) { p_osc->vol = (X); } else if((X) == 0) { osc[2].freq = 0; }
 
 // Oscillator memory
 typedef struct {
@@ -346,15 +345,16 @@ void SquawkSynth::advance() {
 
       if(ix_period != 0x3F) {
         // Reset volume
-        p_fxm->volume = 0x1F;
-        SET_VOL(p_fxm->volume);
+        p_osc->vol = p_fxm->volume = 0x1F;
         // Cell has note
         if(fx == 0x30 || fx == 0x50) {
           // Tone-portamento effect setup
           p_fxm->port_target = pgm_read_word(&period_tbl[ix_period]);
         } else {
           // Start note
-          p_osc->freq = FREQ(pgm_read_word(&period_tbl[ix_period]));
+          if(ch != 3) {
+          	p_osc->freq = FREQ(pgm_read_word(&period_tbl[ix_period]));
+         	}
           // Set required effect memory parameters
           p_fxm->period = pgm_read_word(&period_tbl[ix_period]);
         }
@@ -371,8 +371,7 @@ void SquawkSynth::advance() {
           pattern_jump = true;
           break;
         case 0xC0: // Set volume
-          p_fxm->volume = MIN(fxp, 0x1F);
-          SET_VOL(p_fxm->volume);
+          p_osc->vol = p_fxm->volume = MIN(fxp, 0x1F);
           break;
         case 0xD0: // Jump to row
           fxp = HI4(fxp) * 10 + LO4(fxp);
@@ -387,12 +386,16 @@ void SquawkSynth::advance() {
           if(fxp) p_fxm->vibr.fxp = fxp;
           break;
         case 0xE1: // Fine slide up
-          p_fxm->period = MAX(p_fxm->period - fxp, PERIOD_MIN);
-          p_osc->freq = FREQ(p_fxm->period);
+          if(ch != 3) {
+	          p_fxm->period = MAX(p_fxm->period - fxp, PERIOD_MIN);
+          	p_osc->freq = FREQ(p_fxm->period);
+         	}
           break;
         case 0xE2: // Fine slide down
-          p_fxm->period = MIN(p_fxm->period + fxp, PERIOD_MAX);
-          p_osc->freq = FREQ(p_fxm->period);
+          if(ch != 3) {
+	          p_fxm->period = MIN(p_fxm->period + fxp, PERIOD_MAX);
+          	p_osc->freq = FREQ(p_fxm->period);
+         	}
           break;
         case 0xE3: // Glissando control
           p_fxm->glissando = (fxp != 0);
@@ -404,12 +407,10 @@ void SquawkSynth::advance() {
           p_fxm->trem.mode = fxp;
           break;
         case 0xEA: // Fine volume slide up
-          p_fxm->volume = MIN(p_fxm->volume + fxp, 0x1F);
-          SET_VOL(p_fxm->volume);
+          p_osc->vol = p_fxm->volume = MIN(p_fxm->volume + fxp, 0x1F);
           break;
         case 0xEB: // Fine volume slide down
-          p_fxm->volume = MAX(p_fxm->volume - fxp, 0);
-          SET_VOL(p_fxm->volume);
+          p_osc->vol = p_fxm->volume = MAX(p_fxm->volume - fxp, 0);
           break;
         case 0xEE: // Delay
           row_delay = fxp;
@@ -420,27 +421,23 @@ void SquawkSynth::advance() {
       // Effects processed when tick > 0
       switch(fx) {
         case 0x10: // Slide up
-          p_fxm->period = MAX(p_fxm->period - fxp, PERIOD_MIN);
-          p_osc->freq = FREQ(p_fxm->period);
+          if(ch != 3) {
+	          p_fxm->period = MAX(p_fxm->period - fxp, PERIOD_MIN);
+	          p_osc->freq = FREQ(p_fxm->period);
+	        }
           break;
         case 0x20: // Slide down
-          p_fxm->period = MIN(p_fxm->period + fxp, PERIOD_MAX);
-          p_osc->freq = FREQ(p_fxm->period);
-          break;
-        case 0xE9: // Retrigger note
-          temp = tick; while(temp >= fxp) temp -= fxp;
-          if(temp == 0) {
-            p_osc->freq = FREQ(pgm_read_word(&period_tbl[ix_period]));
-          }
+        	if(ch != 3) {
+	          p_fxm->period = MIN(p_fxm->period + fxp, PERIOD_MAX);
+	          p_osc->freq = FREQ(p_fxm->period);
+	        }
           break;
         case 0xEC: // Note cut
-          if(fxp == tick) {
-            SET_VOL(0x00);
-          }
+          if(fxp == tick) p_osc->vol = 0x00;
           break;
         default:   // Multi-effect processing
           // Portamento
-          if(fx == 0x30 || fx == 0x50) {
+          if(ch != 3 && (fx == 0x30 || fx == 0x50)) {
             if(p_fxm->period < p_fxm->port_target) p_fxm->period = MIN(p_fxm->period + p_fxm->port_speed,  p_fxm->port_target);
             else                                   p_fxm->period = MAX(p_fxm->period - p_fxm->port_speed,  p_fxm->port_target);
             if(p_fxm->glissando) p_osc->freq = FREQ(glissando(ch));
@@ -450,29 +447,32 @@ void SquawkSynth::advance() {
           if(fx == 0x50 || fx == 0x60 || fx == 0xA0) {
             if((fxp & 0xF0) == 0) p_fxm->volume -= (LO4(fxp));
             if((fxp & 0x0F) == 0) p_fxm->volume += (HI4(fxp));
-            p_fxm->volume = MAX(MIN(p_fxm->volume, 0x1F), 0);
-            SET_VOL(p_fxm->volume);
+            p_osc->vol = p_fxm->volume = MAX(MIN(p_fxm->volume, 0x1F), 0);
           }
       }
     }
       
     // Normal play and arpeggio
     if(fx == 0x00) {
-      temp = tick; while(temp > 2) temp -= 2;
-      if(temp == 0) {
-        // Reset
-        if(ch != 2 || osc[2].vol) p_osc->freq = FREQ(p_fxm->period);
-      } else if(fxp) {
-        // Arpeggio
-        p_osc->freq = FREQ(arpeggio(ch, (temp == 1 ? HI4(fxp) : LO4(fxp))));
-      }
+	    if(ch != 3) {
+	      temp = tick; while(temp > 2) temp -= 2;
+	      if(temp == 0) {
+	        // Reset
+	        p_osc->freq = FREQ(p_fxm->period);       	
+	      } else if(fxp) {
+	        // Arpeggio
+	        p_osc->freq = FREQ(arpeggio(ch, (temp == 1 ? HI4(fxp) : LO4(fxp))));
+	      }
+	    }
     } else if(fx == 0x40 || fx == 0x60) {
-      // Vibrato
-      p_osc->freq = FREQ((p_fxm->period + do_osc(&p_fxm->vibr)));
+	    if(ch != 3) {
+	      // Vibrato
+	      p_osc->freq = FREQ((p_fxm->period + do_osc(&p_fxm->vibr)));
+	    }
     } else if(fx == 0x70) {
       // Tremolo
       temp = p_fxm->volume + do_osc(&p_fxm->trem);
-      SET_VOL(MAX(MIN(temp, 0x1F), 0));
+      p_osc->vol = MAX(MIN(temp, 0x1F), 0);
     }
   
     // Next channel

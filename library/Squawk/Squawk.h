@@ -51,17 +51,14 @@ typedef struct {
 
 // oscillator memory
 extern Oscillator osc[4];
-// channel 0 is pulse wave
-//    waveform has 25% duty
-// channel 1 is pulse wave
-//    waveform has 50% duty = square wave
+// channel 0 is pulse wave @ 25% duty
+// channel 1 is square wave
 // channel 2 is triangle wave
-//    .vol is disregarded, always plays at full volume
 // channel 3 is noise
-//    .freq & .phase are used as a LFSR, should not be changed
 
-// LFSR: Linear feedback shift register, a method of producing
-// a pseudo-random bit sequence. Used to generate nasty noise.
+// For channel 3, freq is used as part of its LFSR and should not be changed.
+// LFSR: Linear feedback shift register, a method of producing a
+// pseudo-random bit sequence, used to generate nasty noise.
 
 #ifdef __AVR_ATmega32U4__
 // Supported configurations for ATmega32U4
@@ -101,7 +98,7 @@ extern Oscillator osc[4];
 
 // SAMPLE CRUNCHER
 // generates samples and updates oscillators
-// uses 3+112=115 cycles / 31.625% CPU @ 44kHz on 16MHz
+// uses 3+119=122 cycles / 33.55% CPU @ 44kHz on 16MHz
 #define SQUAWK_CONSTRUCT_ISR(TARGET_REGISTER) \
 intptr_t squawk_register = (intptr_t)&TARGET_REGISTER; \
 ISR(TIMER1_COMPA_vect, ISR_NAKED) { \
@@ -109,74 +106,89 @@ ISR(TIMER1_COMPA_vect, ISR_NAKED) { \
     "push r18                                         " "\n\t" \
     "push r17                                         " "\n\t" \
     "push r16                                         " "\n\t" \
-    "push r8                                          " "\n\t" \
-    "push r5                                          " "\n\t" \
     "push r0                                          " "\n\t" \
-    "in   r0,                    __SREG__             " "\n\t" \
-    "lds  r18,                   osc+0*%[mul]+%[fre]  " "\n\t" \
-    "lds  r8,                    osc+0*%[mul]+%[pha]  " "\n\t" \
-    "add  r8,                    r18                  " "\n\t" \
-    "sts  osc+0*%[mul]+%[pha],   r8                   " "\n\t" \
-    "lds  r18,                   osc+0*%[mul]+%[fre]+1" "\n\t" \
-    "lds  r5,                    osc+0*%[mul]+%[pha]+1" "\n\t" \
-    "adc  r5,                    r18                  " "\n\t" \
-    "sts  osc+0*%[mul]+%[pha]+1, r5                   " "\n\t" \
-    "mov  r17,                   r5                   " "\n\t" \
-    "lsl  r17                                         " "\n\t" \
-    "and  r17,                   r5                   " "\n\t" \
-    "lds  r16,                   osc+0*%[mul]+%[vol]  " "\n\t" \
-    "sbrc r17,                   7                    " "\n\t" \
-    "neg  r16                                         " "\n\t" \
-    "lds  r18,                   osc+1*%[mul]+%[fre]  " "\n\t" \
-    "lds  r8,                    osc+1*%[mul]+%[pha]  " "\n\t" \
-    "add  r8,                    r18                  " "\n\t" \
-    "sts  osc+1*%[mul]+%[pha],   r8                   " "\n\t" \
-    "lds  r18,                   osc+1*%[mul]+%[fre]+1" "\n\t" \
-    "lds  r5,                    osc+1*%[mul]+%[pha]+1" "\n\t" \
-    "adc  r5,                    r18                  " "\n\t" \
-    "sts  osc+1*%[mul]+%[pha]+1, r5                   " "\n\t" \
-    "lds  r17,                   osc+1*%[mul]+%[vol]  " "\n\t" \
-    "sbrc r5,                    7                    " "\n\t" \
-    "neg  r17                                         " "\n\t" \
-    "add  r16,                   r17                  " "\n\t" \
+    "push r1                                          " "\n\t" \
+    "push r2                                          " "\n\t" \
+    "in   r2,                    __SREG__             " "\n\t" \
+ \
     "lds  r18,                   osc+2*%[mul]+%[fre]  " "\n\t" \
-    "lds  r8,                    osc+2*%[mul]+%[pha]  " "\n\t" \
-    "add  r8,                    r18                  " "\n\t" \
-    "sts  osc+2*%[mul]+%[pha],   r8                   " "\n\t" \
+    "lds  r0,                    osc+2*%[mul]+%[pha]  " "\n\t" \
+    "add  r0,                    r18                  " "\n\t" \
+    "sts  osc+2*%[mul]+%[pha],   r0                   " "\n\t" \
     "lds  r18,                   osc+2*%[mul]+%[fre]+1" "\n\t" \
-    "lds  r5,                    osc+2*%[mul]+%[pha]+1" "\n\t" \
-    "adc  r5,                    r18                  " "\n\t" \
-    "sts  osc+2*%[mul]+%[pha]+1, r5                   " "\n\t" \
-    "mov  r17,                   r5                   " "\n\t" \
+    "lds  r1,                    osc+2*%[mul]+%[pha]+1" "\n\t" \
+    "adc  r1,                    r18                  " "\n\t" \
+    "sts  osc+2*%[mul]+%[pha]+1, r1                   " "\n\t" \
+ \
+    "mov  r17,                   r1                   " "\n\t" \
     "sbrc r17,                   7                    " "\n\t" \
     "com  r17                                         " "\n\t" \
-    "lsr  r17                                         " "\n\t" \
-    "add  r16,                   r17                  " "\n\t" \
-    "ldi  r17,                   1                    " "\n\t" \
-    "lds  r8,                    osc+3*%[mul]+%[fre]  " "\n\t" \
-    "lds  r5,                    osc+3*%[mul]+%[fre]+1" "\n\t" \
-    "add  r8,                    r8                   " "\n\t" \
-    "adc  r5,                    r5                   " "\n\t" \
-    "sbrc r5,                    7                    " "\n\t" \
-    "eor  r8,                    r17                  " "\n\t" \
-    "sbrc r5,                    6                    " "\n\t" \
-    "eor  r8,                    r17                  " "\n\t" \
-    "sts  osc+3*%[mul]+%[fre],   r8                   " "\n\t" \
-    "sts  osc+3*%[mul]+%[fre]+1, r5                   " "\n\t" \
-    "lds  r17,                   osc+3*%[mul]+%[vol]  " "\n\t" \
-    "sbrc r5,                    7                    " "\n\t" \
+    "lsl  r17                                         " "\n\t" \
+    "lds  r16,                   osc+2*%[mul]+%[vol]  " "\n\t" \
+    "subi r17,                   128                   " "\n\t" \
+    "muls r17,                   r16                  " "\n\t" \
+    "lsl  r1                                          " "\n\t" \
+    "mov  r16,                   r1                   " "\n\t" \
+ \
+    "lds  r18,                   osc+0*%[mul]+%[fre]  " "\n\t" \
+    "lds  r0,                    osc+0*%[mul]+%[pha]  " "\n\t" \
+    "add  r0,                    r18                  " "\n\t" \
+    "sts  osc+0*%[mul]+%[pha],   r0                   " "\n\t" \
+    "lds  r18,                   osc+0*%[mul]+%[fre]+1" "\n\t" \
+    "lds  r1,                    osc+0*%[mul]+%[pha]+1" "\n\t" \
+    "adc  r1,                    r18                  " "\n\t" \
+    "sts  osc+0*%[mul]+%[pha]+1, r1                   " "\n\t" \
+ \
+    "mov  r18,                   r1                   " "\n\t" \
+    "lsl  r18                                         " "\n\t" \
+    "and  r18,                   r1                   " "\n\t" \
+    "lds  r17,                   osc+0*%[mul]+%[vol]  " "\n\t" \
+    "sbrc r18,                   7                    " "\n\t" \
     "neg  r17                                         " "\n\t" \
     "add  r16,                   r17                  " "\n\t" \
-    "subi r16,                   160                  " "\n\t" \
+ \
+    "lds  r18,                   osc+1*%[mul]+%[fre]  " "\n\t" \
+    "lds  r0,                    osc+1*%[mul]+%[pha]  " "\n\t" \
+    "add  r0,                    r18                  " "\n\t" \
+    "sts  osc+1*%[mul]+%[pha],   r0                   " "\n\t" \
+    "lds  r18,                   osc+1*%[mul]+%[fre]+1" "\n\t" \
+    "lds  r1,                    osc+1*%[mul]+%[pha]+1" "\n\t" \
+    "adc  r1,                    r18                  " "\n\t" \
+    "sts  osc+1*%[mul]+%[pha]+1, r1                   " "\n\t" \
+\
+    "lds  r17,                   osc+1*%[mul]+%[vol]  " "\n\t" \
+    "sbrc r1,                    7                    " "\n\t" \
+    "neg  r17                                         " "\n\t" \
+    "add  r16,                   r17                  " "\n\t" \
+\
+    "ldi  r17,                   1                    " "\n\t" \
+    "lds  r0,                    osc+3*%[mul]+%[fre]  " "\n\t" \
+    "lds  r1,                    osc+3*%[mul]+%[fre]+1" "\n\t" \
+    "add  r0,                    r0                   " "\n\t" \
+    "adc  r1,                    r1                   " "\n\t" \
+    "sbrc r1,                    7                    " "\n\t" \
+    "eor  r0,                    r17                  " "\n\t" \
+    "sbrc r1,                    6                    " "\n\t" \
+    "eor  r0,                    r17                  " "\n\t" \
+    "sts  osc+3*%[mul]+%[fre],   r0                   " "\n\t" \
+    "sts  osc+3*%[mul]+%[fre]+1, r1                   " "\n\t" \
+\
+    "lds  r17,                   osc+3*%[mul]+%[vol]  " "\n\t" \
+    "sbrc r1,                    7                    " "\n\t" \
+    "neg  r17                                         " "\n\t" \
+    "add  r16,                   r17                  " "\n\t" \
+\
+    "subi r16,                   128                  " "\n\t" \
     "sts  %[reg],                r16                  " "\n\t" \
-    "out  __SREG__,              r0                   " "\n\t" \
+\
+    "out  __SREG__,              r2                   " "\n\t" \
+    "pop  r2                                          " "\n\t" \
+    "pop  r1                                          " "\n\t" \
     "pop  r0                                          " "\n\t" \
-    "pop  r5                                          " "\n\t" \
-    "pop  r8                                          " "\n\t" \
     "pop  r16                                         " "\n\t" \
     "pop  r17                                         " "\n\t" \
     "pop  r18                                         " "\n\t" \
-    "reti                                             " "\n\t" \
+	  "reti                                             " "\n\t" \
     : \
     : [reg] "M" _SFR_MEM_ADDR(TARGET_REGISTER), \
       [mul] "M" (sizeof(Oscillator)), \
