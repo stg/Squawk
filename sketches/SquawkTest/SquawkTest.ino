@@ -41,7 +41,7 @@ void setup() {
   // Begin playback of melody_data.
   Squawk.play(TheOriginalSquawk);
   // Tune the song to something more suitable for a piezo
-  //Squawk.tune(1.6);
+  Squawk.tune(1.6);
 }
 
 void loop() {
