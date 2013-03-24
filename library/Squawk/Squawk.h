@@ -99,7 +99,8 @@ extern Oscillator osc[4];
 
 // SAMPLE CRUNCHER
 // generates samples and updates oscillators
-// uses 3+119=122 cycles / 33.55% CPU @ 44kHz on 16MHz
+// uses 130 cycles (not counting playroutine)
+//     ~1/3 CPU @ 44kHz on 16MHz
 #define SQUAWK_CONSTRUCT_ISR(TARGET_REGISTER) \
 uint16_t cia, cia_count; \
 intptr_t squawk_register = (intptr_t)&TARGET_REGISTER; \
