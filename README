@@ -11,26 +11,23 @@ Thanks to:
 STEP 1
 
 Track your music using the template .mod file, in any ProTracker
-compatible tracker software such as [LINDE-examples].
+compatible tracker software such as OpenMPT, MilkyTracker, etc.
 
 When tracking, follow a few simple rules:
 
-1) Only use instrument 1 in channel 1, 2 in channel 2 and so on [LINDE-correct?]
-2) Only use even numbers for all volume related commands
-3) Don't use advanced jumps (regular jumps are ok)
+1) Only use instrument 1 in channel 1, 2 in ch. 2, and so on.
+2) Only use even numbers for parameters on volume related commands
+3) Don't use advanced looping (regular jumps/breaks are ok)
 4) Don't try to set tempo (speed is ok)
-5) Only use notes in octaves 3-6
-6) Put no more than 31 patterns in your order list
+5) Put no more than 31 patterns in your order list
 
 
 STEP 2
 
-After tracking, convert your .mod file using the converter/squawkify.py script:
-
-[LINDE-instructions]
+After tracking, convert your .mod file using the supplied converter.
 
 
 STEP 3
 
 Copy the generated data into your sketch and you are ready to go!
-See sketches for examples on how to get things going.
+See sketches for examples on how to get things moving.
