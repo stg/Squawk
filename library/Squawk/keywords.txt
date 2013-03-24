@@ -14,8 +14,8 @@ begin	KEYWORD2
 play	KEYWORD2
 pause	KEYWORD2
 stop	KEYWORD2
-advance	KEYWORD2
 tune	KEYWORD2
+tempo	KEYWORD2
 
 #######################################
 # Instances (KEYWORD2)

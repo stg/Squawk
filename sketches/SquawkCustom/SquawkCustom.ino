@@ -35,7 +35,7 @@ void setup() {
   Squawk.begin(44100);
   // Begin playback.
   Squawk.play();
-  //
+  // Set up volume for triangle oscillator
   osc[2].vol = 0x7F;
 }
 

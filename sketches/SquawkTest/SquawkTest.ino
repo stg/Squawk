@@ -35,20 +35,19 @@ extern Melody TheOriginalSquawk[];
 
 // Initialize Squawk
 void setup() {
-  // Set up Squawk to generate samples at 44.1kHz.
+  // Set up Squawk to generate samples at 32kHz.
   // Squawk always steals Timer1 for sample crunching.
-  Squawk.begin(44100);
+  Squawk.begin(32000);
   // Begin playback of melody_data.
   Squawk.play(TheOriginalSquawk);
   // Tune the song to something more suitable for a piezo
   Squawk.tune(1.6);
+  // Lower the tempo ever so slightly
+  Squawk.tempo(48);
 }
 
 void loop() {
-  // It's up to the sketch to call Squawk.advance() periodically in order to
-  // advance playback. We want to do this roughly 50 timer per second.
-  Squawk.advance();
-  delay(20);
+  // Do whatever you want
 }
 
 // The Original Squawk by Philip Linde (7kB)

@@ -54,6 +54,7 @@ static bool     deconstruct;
 static uint32_t tuning_long;
 static uint16_t sample_rate;
 static float    tuning = 1.0;
+static uint16_t tick_rate = 50;
 
 static const uint8_t *p_play;
 
@@ -62,16 +63,17 @@ Oscillator osc[4];
 
 // Imports
 extern intptr_t squawk_register;
+extern uint16_t cia;
 
 // ProTracker period tables
 static const uint16_t period_tbl[84] PROGMEM = {
   3424, 3232, 3048, 2880, 2712, 2560, 2416, 2280, 2152, 2032, 1920, 1814,
-	1712, 1616, 1524, 1440, 1356, 1280, 1208, 1140, 1076, 1016,  960,  907,
-	 856,  808,  762,  720,  678,  640,  604,  570,  538,  508,  480,  453,
-	 428,  404,  381,  360,  339,  320,  302,  285,  269,  254,  240,  226,
-	 214,  202,  190,  180,  170,  160,  151,  143,  135,  127,  120,  113,
-	 107,  101,   95,   90,   85,   80,   75,   71,   67,   63,   60,   56,
-	  53,   50,   47,   45,   42,   40,   37,   35,   33,   31,   30,   28,
+  1712, 1616, 1524, 1440, 1356, 1280, 1208, 1140, 1076, 1016,  960,  907,
+   856,  808,  762,  720,  678,  640,  604,  570,  538,  508,  480,  453,
+   428,  404,  381,  360,  339,  320,  302,  285,  269,  254,  240,  226,
+   214,  202,  190,  180,  170,  160,  151,  143,  135,  127,  120,  113,
+   107,  101,   95,   90,   85,   80,   75,   71,   67,   63,   60,   56,
+    53,   50,   47,   45,   42,   40,   37,   35,   33,   31,   30,   28,
 };
 
 // ProTracker sine table
@@ -154,8 +156,14 @@ static void playroutine_reset() {
 // Tunes Squawk to a different frequency
 void SquawkSynth::tune(float new_tuning) {
   tuning = new_tuning;
-	tuning_long = (long)(((double)3669213184.0 / (double)sample_rate) * (double)tuning);
-	
+  tuning_long = (long)(((double)3669213184.0 / (double)sample_rate) * (double)tuning);
+  
+}
+
+// Sets tempo
+void SquawkSynth::tempo(uint16_t new_tempo) {
+  tick_rate = new_tempo;
+  cia = sample_rate / tick_rate; // not atomic?
 }
 
 // Initializes Squawk
@@ -164,7 +172,8 @@ void SquawkSynth::begin(uint16_t hz) {
   word isr_rr;
 
   sample_rate = hz;
-	tuning_long = (long)(((double)3669213184.0 / (double)sample_rate) * (double)tuning);
+  tuning_long = (long)(((double)3669213184.0 / (double)sample_rate) * (double)tuning);
+  cia = sample_rate / tick_rate;
 
   if(squawk_register == (intptr_t)&OCR0A) {
     // Squawk uses PWM on OCR0A/PD5(ATMega328/168)/PB7(ATMega32U4)
@@ -240,7 +249,7 @@ void SquawkSynth::begin(uint16_t hz) {
 }
 
 void SquawkSynth::play() {
-  TIMSK1 = 1 << OCIE1A;    // Enable interrupt
+  TIMSK1 |= 1 << OCIE1A; // Enable interrupt
 }
 
 void SquawkSynth::play(const uint8_t *melody) {
@@ -252,16 +261,28 @@ void SquawkSynth::play(const uint8_t *melody) {
 }
 
 void SquawkSynth::pause() {
-  TIMSK1 = 0;              // Disable interrupt
+  TIMSK1 = 0; // Disable interrupt
 }
 
 void SquawkSynth::stop() {
   pause();
-  playroutine_reset();
+  p_play = NULL; // Unload melody
 }
 
 // Progress module by one tick
-void SquawkSynth::advance() {
+void squawk_playroutine() {
+  static bool lockout = false;
+
+  if(!p_play) return;
+    
+  // Protect from re-entry via ISR
+  cli();
+  if(lockout) {
+    sei();
+    return;
+  }
+  lockout = true;
+  sei();
 
   // Advance tick
   if(++tick == speed) tick = 0;
@@ -269,252 +290,253 @@ void SquawkSynth::advance() {
   // Handle row delay
   if(row_delay) {
     if(tick == 0) row_delay--;
-    return;
-  }
-  
-  // Advance playback
-  if(tick == 0) {
-    if(++ix_row == 64) {
-      ix_row = 0;
-      if(++ix_order == pgm_read_byte(p_play)) ix_order = 0;
-      deconstruct = true;
-    }
-    // Forced order/row
-    if(ix_nextorder != 0xFF) {
-      ix_order = ix_nextorder;
-      ix_nextorder = 0xFF;
-      deconstruct = true;
-    }
-    if(ix_nextrow != 0xFF) {
-      ix_row = ix_nextrow;
-      ix_nextrow = 0xFF;
-      deconstruct = true;
-    }
-  }
-  
-  // Deconstruct cells
-  if(deconstruct) {
-    const uint8_t *p_data;
-    uint8_t data;
-    p_data = &p_play[32 + ((pgm_read_byte(&p_play[1 + ix_order]) << 6) + ix_row) * 9];
-    data = pgm_read_byte(  p_data); cel[0].fxc  =  data << 0x04;
-                                    cel[1].fxc  =  data &  0xF0;
-    data = pgm_read_byte(++p_data); cel[0].fxp  =  data;
-    data = pgm_read_byte(++p_data); cel[1].fxp  =  data;
-    data = pgm_read_byte(++p_data); cel[2].fxc  =  data << 0x04;
-                                    cel[3].fxc  =  data >> 0x04;
-    data = pgm_read_byte(++p_data); cel[2].fxp  =  data;
-    data = pgm_read_byte(++p_data); cel[3].fxp  =  data;
-    data = pgm_read_byte(++p_data); cel[0].ixp  =  data;
-    data = pgm_read_byte(++p_data); cel[1].ixp  =  data;
-    data = pgm_read_byte(++p_data); cel[2].ixp  =  data;
-
-    if(cel[0].fxc == 0xE0) { cel[0].fxc |= cel[0].fxp >> 4; cel[0].fxp &= 0x0F; }
-    if(cel[1].fxc == 0xE0) { cel[1].fxc |= cel[1].fxp >> 4; cel[1].fxp &= 0x0F; }
-    if(cel[2].fxc == 0xE0) { cel[2].fxc |= cel[2].fxp >> 4; cel[2].fxp &= 0x0F; }
+  } else {
     
-		// Cell 3 is ghetto-crunched, but this saves a byte
-		cel[3].ixp = ((cel[3].fxp & 0x80) ? 0x00 : 0x7F) | ((cel[3].fxp & 0x40) ? 0x80 : 0x00);
-		cel[3].fxp &= 0x3F;
-		switch(cel[3].fxc) {
-			case 0x02:
-			case 0x03: if(cel[3].fxc & 0x01) cel[3].fxp |= 0x40; cel[3].fxp = (cel[3].fxp >> 4) | (cel[3].fxp << 4); cel[3].fxc = 0x70; break;
-			case 0x01: if(cel[3].fxp & 0x08) cel[3].fxp = (cel[3].fxp & 0x07) << 4; cel[3].fxc = 0xA0; break;
-			case 0x04: cel[3].fxc = 0xC0; break;
-			case 0x05: cel[3].fxc = 0xB0; break;
-			case 0x06: cel[3].fxc = 0xD0; break;		
-			case 0x07: cel[3].fxc = 0xF0; break;
-			case 0x08: cel[3].fxc = 0xE7; break;
-			case 0x09: cel[3].fxc = 0xE9; break;
-			case 0x0A: cel[3].fxc = (cel[3].fxp & 0x08) ? 0xEA : 0xEB; cel[3].fxp &= 0x07; break;
-			case 0x0B: cel[3].fxc = (cel[3].fxp & 0x10) ? 0xED : 0xEC; cel[3].fxp &= 0x0F; break;
-			case 0x0C: cel[3].fxc = 0xEE; break;
-		}    
-    
-  }
-  
-  // Quick pointer access
-  fxm_t        *p_fxm = fxm;
-  Oscillator   *p_osc = osc;
-  cell_t       *p_cel = cel;
-
-  // Temps
-  uint8_t       ch, fx, fxp;
-  bool          pattern_jump = false;
-  uint8_t       ix_period;
-  
-  for(ch = 0; ch != 4; ch++) {
-    uint8_t       temp;
-    
-    // Deconstruct cell
-    fx        = p_cel->fxc;
-    fxp       = p_cel->fxp;
-    ix_period = p_cel->ixp;
-
-    // General effect parameter memory
-    if(fx == 0x10 || fx == 0x20 || fx == 0xE1 || fx == 0xE2 || fx == 0x50 || fx == 0x60 || fx == 0xA0) {
-      if(fxp) {
-        p_fxm->param = fxp;
-      } else {
-        fxp = p_fxm->param;
+    // Advance playback
+    if(tick == 0) {
+      if(++ix_row == 64) {
+        ix_row = 0;
+        if(++ix_order == pgm_read_byte(p_play)) ix_order = 0;
+        deconstruct = true;
+      }
+      // Forced order/row
+      if(ix_nextorder != 0xFF) {
+        ix_order = ix_nextorder;
+        ix_nextorder = 0xFF;
+        deconstruct = true;
+      }
+      if(ix_nextrow != 0xFF) {
+        ix_row = ix_nextrow;
+        ix_nextrow = 0xFF;
+        deconstruct = true;
       }
     }
-
-    // If first tick
-    if(tick == (fx == 0xED ? fxp : 0)) {
-
-			if(ix_period & 0x80) {
-        // Reset volume
-        p_osc->vol = p_fxm->volume = 0x1F;
-			}
-
-      if((ix_period & 0x7F) != 0x7F) {
-	      // Reset oscillators
-	      if((p_fxm->vibr.mode & 0x4) == 0x0) p_fxm->vibr.offset = 0;
-	      if((p_fxm->trem.mode & 0x4) == 0x0) p_fxm->trem.offset = 0;
-        // Cell has note
-        if(fx == 0x30 || fx == 0x50) {
-          // Tone-portamento effect setup
-          p_fxm->port_target = pgm_read_word(&period_tbl[ix_period & 0x7F]);
+    
+    // Deconstruct cells
+    if(deconstruct) {
+      const uint8_t *p_data;
+      uint8_t data;
+      p_data = &p_play[32 + ((pgm_read_byte(&p_play[1 + ix_order]) << 6) + ix_row) * 9];
+      data = pgm_read_byte(  p_data); cel[0].fxc  =  data << 0x04;
+                                      cel[1].fxc  =  data &  0xF0;
+      data = pgm_read_byte(++p_data); cel[0].fxp  =  data;
+      data = pgm_read_byte(++p_data); cel[1].fxp  =  data;
+      data = pgm_read_byte(++p_data); cel[2].fxc  =  data << 0x04;
+                                      cel[3].fxc  =  data >> 0x04;
+      data = pgm_read_byte(++p_data); cel[2].fxp  =  data;
+      data = pgm_read_byte(++p_data); cel[3].fxp  =  data;
+      data = pgm_read_byte(++p_data); cel[0].ixp  =  data;
+      data = pgm_read_byte(++p_data); cel[1].ixp  =  data;
+      data = pgm_read_byte(++p_data); cel[2].ixp  =  data;
+  
+      if(cel[0].fxc == 0xE0) { cel[0].fxc |= cel[0].fxp >> 4; cel[0].fxp &= 0x0F; }
+      if(cel[1].fxc == 0xE0) { cel[1].fxc |= cel[1].fxp >> 4; cel[1].fxp &= 0x0F; }
+      if(cel[2].fxc == 0xE0) { cel[2].fxc |= cel[2].fxp >> 4; cel[2].fxp &= 0x0F; }
+      
+      // Cell 3 is ghetto-crunched, but this saves a byte
+      cel[3].ixp = ((cel[3].fxp & 0x80) ? 0x00 : 0x7F) | ((cel[3].fxp & 0x40) ? 0x80 : 0x00);
+      cel[3].fxp &= 0x3F;
+      switch(cel[3].fxc) {
+        case 0x02:
+        case 0x03: if(cel[3].fxc & 0x01) cel[3].fxp |= 0x40; cel[3].fxp = (cel[3].fxp >> 4) | (cel[3].fxp << 4); cel[3].fxc = 0x70; break;
+        case 0x01: if(cel[3].fxp & 0x08) cel[3].fxp = (cel[3].fxp & 0x07) << 4; cel[3].fxc = 0xA0; break;
+        case 0x04: cel[3].fxc = 0xC0; break;
+        case 0x05: cel[3].fxc = 0xB0; break;
+        case 0x06: cel[3].fxc = 0xD0; break;    
+        case 0x07: cel[3].fxc = 0xF0; break;
+        case 0x08: cel[3].fxc = 0xE7; break;
+        case 0x09: cel[3].fxc = 0xE9; break;
+        case 0x0A: cel[3].fxc = (cel[3].fxp & 0x08) ? 0xEA : 0xEB; cel[3].fxp &= 0x07; break;
+        case 0x0B: cel[3].fxc = (cel[3].fxp & 0x10) ? 0xED : 0xEC; cel[3].fxp &= 0x0F; break;
+        case 0x0C: cel[3].fxc = 0xEE; break;
+      }    
+      
+    }
+    
+    // Quick pointer access
+    fxm_t        *p_fxm = fxm;
+    Oscillator   *p_osc = osc;
+    cell_t       *p_cel = cel;
+  
+    // Temps
+    uint8_t       ch, fx, fxp;
+    bool          pattern_jump = false;
+    uint8_t       ix_period;
+    
+    for(ch = 0; ch != 4; ch++) {
+      uint8_t       temp;
+      
+      // Deconstruct cell
+      fx        = p_cel->fxc;
+      fxp       = p_cel->fxp;
+      ix_period = p_cel->ixp;
+  
+      // General effect parameter memory
+      if(fx == 0x10 || fx == 0x20 || fx == 0xE1 || fx == 0xE2 || fx == 0x50 || fx == 0x60 || fx == 0xA0) {
+        if(fxp) {
+          p_fxm->param = fxp;
         } else {
-          // Set required effect memory parameters
-          p_fxm->period = pgm_read_word(&period_tbl[ix_period & 0x7F]);
-          // Start note
-          if(ch != 3) {
-          	p_osc->freq = FREQ(p_fxm->period);
-         	}
+          fxp = p_fxm->param;
         }
       }
-
-      // Effects processed when tick = 0
-      switch(fx) {
-        case 0x30: // Portamento
-          if(fxp) p_fxm->port_speed = fxp;
-          break;
-        case 0xB0: // Jump to pattern
-          ix_nextorder = (fxp >= pgm_read_byte(&p_play[0]) ? 0x00 : fxp);
-          ix_nextrow = 0;
-          pattern_jump = true;
-          break;
-        case 0xC0: // Set volume
-          p_osc->vol = p_fxm->volume = MIN(fxp, 0x1F);
-          break;
-        case 0xD0: // Jump to row
-          if(!pattern_jump) ix_nextorder = ((ix_order + 1) >= pgm_read_byte(&p_play[0]) ? 0x00 : ix_order + 1);
-          pattern_jump = true;
-          ix_nextrow = (fxp > 63 ? 0 : fxp);
-          break;
-        case 0xF0: // Set speed, BPM(CIA) not supported
-          if(fxp <= 0x20) speed = fxp;
-          break;
-        case 0x40: // Vibrato
-          if(fxp) p_fxm->vibr.fxp = fxp;
-          break;
-        case 0x70: // Tremolo
-          if(fxp) p_fxm->trem.fxp = fxp;
-          break;
-        case 0xE1: // Fine slide up
-          if(ch != 3) {
-	          p_fxm->period = MAX(p_fxm->period - fxp, PERIOD_MIN);
-          	p_osc->freq = FREQ(p_fxm->period);
-         	}
-          break;
-        case 0xE2: // Fine slide down
-          if(ch != 3) {
-	          p_fxm->period = MIN(p_fxm->period + fxp, PERIOD_MAX);
-          	p_osc->freq = FREQ(p_fxm->period);
-         	}
-          break;
-        case 0xE3: // Glissando control
-          p_fxm->glissando = (fxp != 0);
-          break;
-        case 0xE4: // Set vibrato waveform
-          p_fxm->vibr.mode = fxp;
-          break;
-        case 0xE7: // Set tremolo waveform
-          p_fxm->trem.mode = fxp;
-          break;
-        case 0xEA: // Fine volume slide up
-          p_osc->vol = p_fxm->volume = MIN(p_fxm->volume + fxp, 0x1F);
-          break;
-        case 0xEB: // Fine volume slide down
-          p_osc->vol = p_fxm->volume = MAX(p_fxm->volume - fxp, 0);
-          break;
-        case 0xEE: // Delay
-          row_delay = fxp;
-          break;
-      }
-      
-    } else {
-      // Effects processed when tick > 0
-      switch(fx) {
-        case 0x10: // Slide up
-          if(ch != 3) {
-	          p_fxm->period = MAX(p_fxm->period - fxp, PERIOD_MIN);
-	          p_osc->freq = FREQ(p_fxm->period);
-	        }
-          break;
-        case 0x20: // Slide down
-        	if(ch != 3) {
-	          p_fxm->period = MIN(p_fxm->period + fxp, PERIOD_MAX);
-	          p_osc->freq = FREQ(p_fxm->period);
-	        }
-          break;
-        case 0xE9: // Retrigger note
-		      temp = tick; while(temp >= fxp) temp -= fxp;
-	        if(!temp) {
-		        if(ch == 3) {
-		        	// umm... this is not atomic and the lfsr will not reset properly
-		        	// every other few hundred retrigs. live with it or go cli()?
-		        	p_osc->freq = p_osc->phase = 0x2000;
-		      	} else {
-		        	p_osc->phase = 0;
-		       	}
-		      }
-          break;
-        case 0xEC: // Note cut
-          if(fxp == tick) p_osc->vol = 0x00;
-          break;
-        default:   // Multi-effect processing
-          // Portamento
-          if(ch != 3 && (fx == 0x30 || fx == 0x50)) {
-            if(p_fxm->period < p_fxm->port_target) p_fxm->period = MIN(p_fxm->period + p_fxm->port_speed,  p_fxm->port_target);
-            else                                   p_fxm->period = MAX(p_fxm->period - p_fxm->port_speed,  p_fxm->port_target);
-            if(p_fxm->glissando) p_osc->freq = FREQ(glissando(ch));
-            else                 p_osc->freq = FREQ(p_fxm->period);
+  
+      // If first tick
+      if(tick == (fx == 0xED ? fxp : 0)) {
+  
+        if(ix_period & 0x80) {
+          // Reset volume
+          p_osc->vol = p_fxm->volume = 0x1F;
+        }
+  
+        if((ix_period & 0x7F) != 0x7F) {
+          // Reset oscillators
+          if((p_fxm->vibr.mode & 0x4) == 0x0) p_fxm->vibr.offset = 0;
+          if((p_fxm->trem.mode & 0x4) == 0x0) p_fxm->trem.offset = 0;
+          // Cell has note
+          if(fx == 0x30 || fx == 0x50) {
+            // Tone-portamento effect setup
+            p_fxm->port_target = pgm_read_word(&period_tbl[ix_period & 0x7F]);
+          } else {
+            // Set required effect memory parameters
+            p_fxm->period = pgm_read_word(&period_tbl[ix_period & 0x7F]);
+            // Start note
+            if(ch != 3) {
+              p_osc->freq = FREQ(p_fxm->period);
+            }
           }
-          // Volume slide
-          if(fx == 0x50 || fx == 0x60 || fx == 0xA0) {
-            if((fxp & 0xF0) == 0) p_fxm->volume -= (LO4(fxp));
-            if((fxp & 0x0F) == 0) p_fxm->volume += (HI4(fxp));
-            p_osc->vol = p_fxm->volume = MAX(MIN(p_fxm->volume, 0x1F), 0);
-          }
+        }
+  
+        // Effects processed when tick = 0
+        switch(fx) {
+          case 0x30: // Portamento
+            if(fxp) p_fxm->port_speed = fxp;
+            break;
+          case 0xB0: // Jump to pattern
+            ix_nextorder = (fxp >= pgm_read_byte(&p_play[0]) ? 0x00 : fxp);
+            ix_nextrow = 0;
+            pattern_jump = true;
+            break;
+          case 0xC0: // Set volume
+            p_osc->vol = p_fxm->volume = MIN(fxp, 0x1F);
+            break;
+          case 0xD0: // Jump to row
+            if(!pattern_jump) ix_nextorder = ((ix_order + 1) >= pgm_read_byte(&p_play[0]) ? 0x00 : ix_order + 1);
+            pattern_jump = true;
+            ix_nextrow = (fxp > 63 ? 0 : fxp);
+            break;
+          case 0xF0: // Set speed, BPM(CIA) not supported
+            if(fxp <= 0x20) speed = fxp;
+            break;
+          case 0x40: // Vibrato
+            if(fxp) p_fxm->vibr.fxp = fxp;
+            break;
+          case 0x70: // Tremolo
+            if(fxp) p_fxm->trem.fxp = fxp;
+            break;
+          case 0xE1: // Fine slide up
+            if(ch != 3) {
+              p_fxm->period = MAX(p_fxm->period - fxp, PERIOD_MIN);
+              p_osc->freq = FREQ(p_fxm->period);
+            }
+            break;
+          case 0xE2: // Fine slide down
+            if(ch != 3) {
+              p_fxm->period = MIN(p_fxm->period + fxp, PERIOD_MAX);
+              p_osc->freq = FREQ(p_fxm->period);
+            }
+            break;
+          case 0xE3: // Glissando control
+            p_fxm->glissando = (fxp != 0);
+            break;
+          case 0xE4: // Set vibrato waveform
+            p_fxm->vibr.mode = fxp;
+            break;
+          case 0xE7: // Set tremolo waveform
+            p_fxm->trem.mode = fxp;
+            break;
+          case 0xEA: // Fine volume slide up
+            p_osc->vol = p_fxm->volume = MIN(p_fxm->volume + fxp, 0x1F);
+            break;
+          case 0xEB: // Fine volume slide down
+            p_osc->vol = p_fxm->volume = MAX(p_fxm->volume - fxp, 0);
+            break;
+          case 0xEE: // Delay
+            row_delay = fxp;
+            break;
+        }
+        
+      } else {
+        // Effects processed when tick > 0
+        switch(fx) {
+          case 0x10: // Slide up
+            if(ch != 3) {
+              p_fxm->period = MAX(p_fxm->period - fxp, PERIOD_MIN);
+              p_osc->freq = FREQ(p_fxm->period);
+            }
+            break;
+          case 0x20: // Slide down
+            if(ch != 3) {
+              p_fxm->period = MIN(p_fxm->period + fxp, PERIOD_MAX);
+              p_osc->freq = FREQ(p_fxm->period);
+            }
+            break;
+          case 0xE9: // Retrigger note
+            temp = tick; while(temp >= fxp) temp -= fxp;
+            if(!temp) {
+              if(ch == 3) {
+                // umm... this is not atomic and the lfsr will not reset properly
+                // every other few hundred retrigs. live with it or go cli()?
+                p_osc->freq = p_osc->phase = 0x2000;
+              } else {
+                p_osc->phase = 0;
+              }
+            }
+            break;
+          case 0xEC: // Note cut
+            if(fxp == tick) p_osc->vol = 0x00;
+            break;
+          default:   // Multi-effect processing
+            // Portamento
+            if(ch != 3 && (fx == 0x30 || fx == 0x50)) {
+              if(p_fxm->period < p_fxm->port_target) p_fxm->period = MIN(p_fxm->period + p_fxm->port_speed,  p_fxm->port_target);
+              else                                   p_fxm->period = MAX(p_fxm->period - p_fxm->port_speed,  p_fxm->port_target);
+              if(p_fxm->glissando) p_osc->freq = FREQ(glissando(ch));
+              else                 p_osc->freq = FREQ(p_fxm->period);
+            }
+            // Volume slide
+            if(fx == 0x50 || fx == 0x60 || fx == 0xA0) {
+              if((fxp & 0xF0) == 0) p_fxm->volume -= (LO4(fxp));
+              if((fxp & 0x0F) == 0) p_fxm->volume += (HI4(fxp));
+              p_osc->vol = p_fxm->volume = MAX(MIN(p_fxm->volume, 0x1F), 0);
+            }
+        }
       }
+  
+      // Normal play and arpeggio
+      if(fx == 0x00) {
+        if(ch != 3) {
+          temp = tick; while(temp > 2) temp -= 2;
+          if(temp == 0) {
+            // Reset
+            p_osc->freq = FREQ(p_fxm->period);        
+          } else if(fxp) {
+            // Arpeggio
+            p_osc->freq = FREQ(arpeggio(ch, (temp == 1 ? HI4(fxp) : LO4(fxp))));
+          }
+        }
+      } else if(fx == 0x40 || fx == 0x60) {
+        if(ch != 3) {
+          // Vibrato
+          p_osc->freq = FREQ((p_fxm->period + do_osc(&p_fxm->vibr)));
+        }
+      } else if(fx == 0x70) {
+        int8_t trem = p_fxm->volume + do_osc(&p_fxm->trem);
+        p_osc->vol = MAX(MIN(trem, 0x1F), 0);
+      }
+  
+      // Next channel
+      p_fxm++; p_cel++; p_osc++;
     }
-
-    // Normal play and arpeggio
-    if(fx == 0x00) {
-	    if(ch != 3) {
-	      temp = tick; while(temp > 2) temp -= 2;
-	      if(temp == 0) {
-	        // Reset
-	        p_osc->freq = FREQ(p_fxm->period);       	
-	      } else if(fxp) {
-	        // Arpeggio
-	        p_osc->freq = FREQ(arpeggio(ch, (temp == 1 ? HI4(fxp) : LO4(fxp))));
-	      }
-	    }
-    } else if(fx == 0x40 || fx == 0x60) {
-	    if(ch != 3) {
-	      // Vibrato
-	      p_osc->freq = FREQ((p_fxm->period + do_osc(&p_fxm->vibr)));
-	    }
-    } else if(fx == 0x70) {
-      int8_t trem = p_fxm->volume + do_osc(&p_fxm->trem);
-      p_osc->vol = MAX(MIN(trem, 0x1F), 0);
-    }
-
-    // Next channel
-    p_fxm++; p_cel++; p_osc++;
   }
+  lockout = false;
 }

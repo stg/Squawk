@@ -11,6 +11,8 @@
 
 #define Melody const uint8_t PROGMEM
 
+extern void squawk_playroutine() asm("squawk_playroutine");
+
 class SquawkSynth {
 
 public:
@@ -25,19 +27,18 @@ public:
   
   // Play the currently loaded melody
   void play();
-  
+    
   // Pause playback
   void pause();
   
-  // Stop playback (essentially pause and restart)
+  // Stop playback (unloads song)
   void stop();
   
-  // Advance playback
-  void advance();
-  
-  // Tune Squawk to a different frequency
-  // tuning default is 6.0
+  // Tune Squawk to a different frequency - default is 1.0
   void tune(float tuning);
+
+  // Change the tempo - default is 50
+	void tempo(uint16_t tempo);
 };
 
 extern SquawkSynth Squawk;
@@ -100,12 +101,13 @@ extern Oscillator osc[4];
 // generates samples and updates oscillators
 // uses 3+119=122 cycles / 33.55% CPU @ 44kHz on 16MHz
 #define SQUAWK_CONSTRUCT_ISR(TARGET_REGISTER) \
+uint16_t cia, cia_count; \
 intptr_t squawk_register = (intptr_t)&TARGET_REGISTER; \
 ISR(TIMER1_COMPA_vect, ISR_NAKED) { \
   asm volatile( \
     "push r18                                         " "\n\t" \
-    "push r17                                         " "\n\t" \
-    "push r16                                         " "\n\t" \
+    "push r27                                         " "\n\t" \
+    "push r26                                         " "\n\t" \
     "push r0                                          " "\n\t" \
     "push r1                                          " "\n\t" \
     "push r2                                          " "\n\t" \
@@ -120,15 +122,15 @@ ISR(TIMER1_COMPA_vect, ISR_NAKED) { \
     "adc  r1,                    r18                  " "\n\t" \
     "sts  osc+2*%[mul]+%[pha]+1, r1                   " "\n\t" \
  \
-    "mov  r17,                   r1                   " "\n\t" \
-    "sbrc r17,                   7                    " "\n\t" \
-    "com  r17                                         " "\n\t" \
-    "lsl  r17                                         " "\n\t" \
-    "lds  r16,                   osc+2*%[mul]+%[vol]  " "\n\t" \
-    "subi r17,                   128                   " "\n\t" \
-    "muls r17,                   r16                  " "\n\t" \
+    "mov  r27,                   r1                   " "\n\t" \
+    "sbrc r27,                   7                    " "\n\t" \
+    "com  r27                                         " "\n\t" \
+    "lsl  r27                                         " "\n\t" \
+    "lds  r26,                   osc+2*%[mul]+%[vol]  " "\n\t" \
+    "subi r27,                   128                   " "\n\t" \
+    "muls r27,                   r26                  " "\n\t" \
     "lsl  r1                                          " "\n\t" \
-    "mov  r16,                   r1                   " "\n\t" \
+    "mov  r26,                   r1                   " "\n\t" \
  \
     "lds  r18,                   osc+0*%[mul]+%[fre]  " "\n\t" \
     "lds  r0,                    osc+0*%[mul]+%[pha]  " "\n\t" \
@@ -142,10 +144,10 @@ ISR(TIMER1_COMPA_vect, ISR_NAKED) { \
     "mov  r18,                   r1                   " "\n\t" \
     "lsl  r18                                         " "\n\t" \
     "and  r18,                   r1                   " "\n\t" \
-    "lds  r17,                   osc+0*%[mul]+%[vol]  " "\n\t" \
+    "lds  r27,                   osc+0*%[mul]+%[vol]  " "\n\t" \
     "sbrc r18,                   7                    " "\n\t" \
-    "neg  r17                                         " "\n\t" \
-    "add  r16,                   r17                  " "\n\t" \
+    "neg  r27                                         " "\n\t" \
+    "add  r26,                   r27                  " "\n\t" \
  \
     "lds  r18,                   osc+1*%[mul]+%[fre]  " "\n\t" \
     "lds  r0,                    osc+1*%[mul]+%[pha]  " "\n\t" \
@@ -156,37 +158,82 @@ ISR(TIMER1_COMPA_vect, ISR_NAKED) { \
     "adc  r1,                    r18                  " "\n\t" \
     "sts  osc+1*%[mul]+%[pha]+1, r1                   " "\n\t" \
 \
-    "lds  r17,                   osc+1*%[mul]+%[vol]  " "\n\t" \
+    "lds  r27,                   osc+1*%[mul]+%[vol]  " "\n\t" \
     "sbrc r1,                    7                    " "\n\t" \
-    "neg  r17                                         " "\n\t" \
-    "add  r16,                   r17                  " "\n\t" \
+    "neg  r27                                         " "\n\t" \
+    "add  r26,                   r27                  " "\n\t" \
 \
-    "ldi  r17,                   1                    " "\n\t" \
+    "ldi  r27,                   1                    " "\n\t" \
     "lds  r0,                    osc+3*%[mul]+%[fre]  " "\n\t" \
     "lds  r1,                    osc+3*%[mul]+%[fre]+1" "\n\t" \
     "add  r0,                    r0                   " "\n\t" \
     "adc  r1,                    r1                   " "\n\t" \
     "sbrc r1,                    7                    " "\n\t" \
-    "eor  r0,                    r17                  " "\n\t" \
+    "eor  r0,                    r27                  " "\n\t" \
     "sbrc r1,                    6                    " "\n\t" \
-    "eor  r0,                    r17                  " "\n\t" \
+    "eor  r0,                    r27                  " "\n\t" \
     "sts  osc+3*%[mul]+%[fre],   r0                   " "\n\t" \
     "sts  osc+3*%[mul]+%[fre]+1, r1                   " "\n\t" \
 \
-    "lds  r17,                   osc+3*%[mul]+%[vol]  " "\n\t" \
+    "lds  r27,                   osc+3*%[mul]+%[vol]  " "\n\t" \
     "sbrc r1,                    7                    " "\n\t" \
-    "neg  r17                                         " "\n\t" \
-    "add  r16,                   r17                  " "\n\t" \
+    "neg  r27                                         " "\n\t" \
+    "add  r26,                   r27                  " "\n\t" \
 \
-    "subi r16,                   128                  " "\n\t" \
-    "sts  %[reg],                r16                  " "\n\t" \
+    "subi r26,                   128                  " "\n\t" \
+    "sts  %[reg],                r26                  " "\n\t" \
+\
+	  "lds  r27,                   cia_count+1          " "\n\t" \
+	  "lds  r26,                   cia_count            " "\n\t" \
+	  "sbiw r26,                   1                    " "\n\t" \
+	  "breq call_playroutine                            " "\n\t" \
+	  "sts  cia_count+1,           r27                  " "\n\t" \
+	  "sts  cia_count,             r26                  " "\n\t" \
+    "out  __SREG__,              r2                   " "\n\t" \
+    "pop  r2                                          " "\n\t" \
+    "pop  r1                                          " "\n\t" \
+    "pop  r0                                          " "\n\t" \
+    "pop  r26                                         " "\n\t" \
+    "pop  r27                                         " "\n\t" \
+    "pop  r18                                         " "\n\t" \
+	  "reti                                             " "\n\t" \
+    "call_playroutine:                                " "\n\t" \
+\
+	  "lds  r27, cia+1                                  " "\n\t" \
+	  "lds  r26, cia                                    " "\n\t" \
+	  "sts  cia_count+1,           r27                  " "\n\t" \
+	  "sts  cia_count,             r26                  " "\n\t" \
+\
+    "sei                                              " "\n\t" \
+	  "push r19                                         " "\n\t" \
+	  "push r20                                         " "\n\t" \
+	  "push r21                                         " "\n\t" \
+	  "push r22                                         " "\n\t" \
+	  "push r23                                         " "\n\t" \
+	  "push r24                                         " "\n\t" \
+	  "push r25                                         " "\n\t" \
+	  "push r30                                         " "\n\t" \
+	  "push r31                                         " "\n\t" \
+\
+    "clr  r1                                          " "\n\t" \
+    "rcall squawk_playroutine                         " "\n\t" \
+\	  
+	  "pop  r31                                         " "\n\t" \
+	  "pop  r30                                         " "\n\t" \
+	  "pop  r25                                         " "\n\t" \
+	  "pop  r24                                         " "\n\t" \
+	  "pop  r23                                         " "\n\t" \
+	  "pop  r22                                         " "\n\t" \
+	  "pop  r21                                         " "\n\t" \
+	  "pop  r20                                         " "\n\t" \
+	  "pop  r19                                         " "\n\t" \
 \
     "out  __SREG__,              r2                   " "\n\t" \
     "pop  r2                                          " "\n\t" \
     "pop  r1                                          " "\n\t" \
     "pop  r0                                          " "\n\t" \
-    "pop  r16                                         " "\n\t" \
-    "pop  r17                                         " "\n\t" \
+    "pop  r26                                         " "\n\t" \
+    "pop  r27                                         " "\n\t" \
     "pop  r18                                         " "\n\t" \
 	  "reti                                             " "\n\t" \
     : \
