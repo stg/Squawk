@@ -6,15 +6,15 @@
 #include "Squawk.h"
 
 // Period range, used for clamping
-#define PERIOD_MIN 54
-#define PERIOD_MAX 856
+#define PERIOD_MIN 28
+#define PERIOD_MAX 3424
 
 // Convenience macros
 #define LO4(V)    (((V) & 0x0F)    )
 #define HI4(V)    (((V) & 0xF0) >> 4)
 #define MIN(A, B) ((A) < (B) ? (A) : (B))
 #define MAX(A, B) ((A) > (B) ? (A) : (B))
-#define FREQ(PERIOD) (tuning_long / PERIOD)
+#define FREQ(PERIOD) (ch == 2 ? (tuning_long / PERIOD) >> 2 : (tuning_long / PERIOD))
 
 // Oscillator memory
 typedef struct {
@@ -63,12 +63,15 @@ Oscillator osc[4];
 // Imports
 extern intptr_t squawk_register;
 
-// ProTracker(+1 octave) period table
-static const uint16_t period_tbl[48] PROGMEM = {
-  856, 808, 762, 720, 678, 640, 604, 570, 538, 508, 480, 453,
-  428, 404, 381, 360, 339, 320, 302, 285, 269, 254, 240, 226,
-  214, 202, 190, 180, 170, 160, 151, 143, 135, 127, 120, 113,
-  107, 101,  95,  90,  85,  80,  76,  71,  67,  64,  60,  57,
+// ProTracker period tables
+static const uint16_t period_tbl[84] PROGMEM = {
+  3424, 3232, 3048, 2880, 2712, 2560, 2416, 2280, 2152, 2032, 1920, 1814,
+	1712, 1616, 1524, 1440, 1356, 1280, 1208, 1140, 1076, 1016,  960,  907,
+	 856,  808,  762,  720,  678,  640,  604,  570,  538,  508,  480,  453,
+	 428,  404,  381,  360,  339,  320,  302,  285,  269,  254,  240,  226,
+	 214,  202,  190,  180,  170,  160,  151,  143,  135,  127,  120,  113,
+	 107,  101,   95,   90,   85,   80,   75,   71,   67,   63,   60,   56,
+	  53,   50,   47,   45,   42,   40,   37,   35,   33,   31,   30,   28,
 };
 
 // ProTracker sine table
@@ -150,7 +153,8 @@ static void playroutine_reset() {
 // Tunes Squawk to a different frequency
 void SquawkSynth::tune(float new_tuning) {
   tuning = new_tuning;
-	tuning_long = (long)(((double)14676852736.0 / (double)sample_rate) * (double)tuning);
+	tuning_long = (long)(((double)3669213184.0 / (double)sample_rate) * (double)tuning);
+	
 }
 
 // Initializes Squawk
@@ -159,7 +163,7 @@ void SquawkSynth::begin(uint16_t hz) {
   word isr_rr;
 
   sample_rate = hz;
-	tuning_long = (long)(((double)14676852736.0 / (double)sample_rate) * (double)tuning);
+	tuning_long = (long)(((double)3669213184.0 / (double)sample_rate) * (double)tuning);
 
   if(squawk_register == (intptr_t)&OCR0A) {
     // Squawk uses PWM on OCR0A/PD5(ATMega328/168)/PB7(ATMega32U4)
@@ -300,10 +304,11 @@ void SquawkSynth::advance() {
                                     cel[3].fxc  =  data &  0xF0;
     data = pgm_read_byte(++p_data); cel[2].fxp  =  data;
     data = pgm_read_byte(++p_data); cel[3].fxp  =  data;
-    data = pgm_read_byte(++p_data); cel[0].ixp  =  data;
-    data = pgm_read_byte(++p_data); cel[1].ixp  =  data;
-    data = pgm_read_byte(++p_data); cel[2].ixp  =  data & 0x3F;
-                                    cel[3].ixp  = (data &  0x80) ? 0x00 : 0x3F;
+    data = pgm_read_byte(++p_data); cel[0].ixp  =  data;// & 0x7F;
+    data = pgm_read_byte(++p_data); cel[1].ixp  =  data;// & 0x7F;
+    data = pgm_read_byte(++p_data); cel[2].ixp  =  data & 0x7F;
+                                    cel[3].ixp  = (data & 0x80) ? 0x00 : 0x7F;
+
     if(cel[0].fxc == 0xE0) { cel[0].fxc |= cel[0].fxp >> 4; cel[0].fxp &= 0x0F; }
     if(cel[1].fxc == 0xE0) { cel[1].fxc |= cel[1].fxp >> 4; cel[1].fxp &= 0x0F; }
     if(cel[2].fxc == 0xE0) { cel[2].fxc |= cel[2].fxp >> 4; cel[2].fxp &= 0x0F; }
@@ -319,7 +324,7 @@ void SquawkSynth::advance() {
   uint8_t       ch, fx, fxp;
   bool          pattern_jump = false;
   uint8_t       ix_period;
-
+  
   for(ch = 0; ch != 4; ch++) {
     uint8_t       temp;
     
@@ -343,20 +348,27 @@ void SquawkSynth::advance() {
       if((p_fxm->vibr.mode & 0x4) == 0x0) p_fxm->vibr.offset = 0;
       if((p_fxm->trem.mode & 0x4) == 0x0) p_fxm->trem.offset = 0;
 
-      if(ix_period != 0x3F) {
+			if(ix_period & 0x80) {
         // Reset volume
         p_osc->vol = p_fxm->volume = 0x1F;
+			}
+
+      if((ix_period & 0x7F) != 0x7F) {
+        if(ch & 2) {
+        	// Reset volume
+        	p_osc->vol = p_fxm->volume = 0x1F;
+       	}
         // Cell has note
         if(fx == 0x30 || fx == 0x50) {
           // Tone-portamento effect setup
-          p_fxm->port_target = pgm_read_word(&period_tbl[ix_period]);
+          p_fxm->port_target = pgm_read_word(&period_tbl[ix_period & 0x7F]);
         } else {
+          // Set required effect memory parameters
+          p_fxm->period = pgm_read_word(&period_tbl[ix_period & 0x7F]);
           // Start note
           if(ch != 3) {
-          	p_osc->freq = FREQ(pgm_read_word(&period_tbl[ix_period]));
+          	p_osc->freq = FREQ(p_fxm->period);
          	}
-          // Set required effect memory parameters
-          p_fxm->period = pgm_read_word(&period_tbl[ix_period]);
         }
       }
 
@@ -379,11 +391,14 @@ void SquawkSynth::advance() {
           pattern_jump = true;
           ix_nextrow = (fxp > 63 ? 0 : fxp);
           break;
-        case 0xF0: // Set speed, CIA (playrate) not supported
+        case 0xF0: // Set speed, BPM(CIA) not supported
           if(fxp <= 0x20) speed = fxp;
           break;
         case 0x40: // Vibrato
           if(fxp) p_fxm->vibr.fxp = fxp;
+          break;
+        case 0x70: // Tremolo
+          if( fxp ) p_fxm->trem.fxp = fxp;
           break;
         case 0xE1: // Fine slide up
           if(ch != 3) {
@@ -431,6 +446,18 @@ void SquawkSynth::advance() {
 	          p_fxm->period = MIN(p_fxm->period + fxp, PERIOD_MAX);
 	          p_osc->freq = FREQ(p_fxm->period);
 	        }
+          break;
+        case 0xE9: // Retrigger note
+		      temp = tick; while(temp >= fxp) temp -= fxp;
+	        if(!temp) {
+		        if(ch == 3) {
+		        	// umm... this is not atomic and the lfsr will not reset properly
+		        	// every other few hundred retrigs. live with it or go cli()?
+		        	p_osc->freq = p_osc->phase = 0x2000;
+		      	} else {
+		        	p_osc->phase = 0;
+		       	}
+		      }
           break;
         case 0xEC: // Note cut
           if(fxp == tick) p_osc->vol = 0x00;
