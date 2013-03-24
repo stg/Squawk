@@ -105,7 +105,8 @@ static int8_t do_osc(osc_t *p_osc) {
       break;
   }
   mul = sample * LO4(p_osc->fxp);
-  p_osc->offset = (p_osc->offset + HI4(p_osc->fxp) - 1) & 0xFF;
+  //Serial.write(p_osc->offset);
+  p_osc->offset = (p_osc->offset + HI4(p_osc->fxp)) & 0xFF;
   return mul >> 6;
 }
 
@@ -301,18 +302,35 @@ void SquawkSynth::advance() {
     data = pgm_read_byte(++p_data); cel[0].fxp  =  data;
     data = pgm_read_byte(++p_data); cel[1].fxp  =  data;
     data = pgm_read_byte(++p_data); cel[2].fxc  =  data << 0x04;
-                                    cel[3].fxc  =  data &  0xF0;
+                                    cel[3].fxc  =  data >> 0x04;
     data = pgm_read_byte(++p_data); cel[2].fxp  =  data;
     data = pgm_read_byte(++p_data); cel[3].fxp  =  data;
-    data = pgm_read_byte(++p_data); cel[0].ixp  =  data;// & 0x7F;
-    data = pgm_read_byte(++p_data); cel[1].ixp  =  data;// & 0x7F;
-    data = pgm_read_byte(++p_data); cel[2].ixp  =  data & 0x7F;
-                                    cel[3].ixp  = (data & 0x80) ? 0x00 : 0x7F;
+    data = pgm_read_byte(++p_data); cel[0].ixp  =  data;
+    data = pgm_read_byte(++p_data); cel[1].ixp  =  data;
+    data = pgm_read_byte(++p_data); cel[2].ixp  =  data;
 
     if(cel[0].fxc == 0xE0) { cel[0].fxc |= cel[0].fxp >> 4; cel[0].fxp &= 0x0F; }
     if(cel[1].fxc == 0xE0) { cel[1].fxc |= cel[1].fxp >> 4; cel[1].fxp &= 0x0F; }
     if(cel[2].fxc == 0xE0) { cel[2].fxc |= cel[2].fxp >> 4; cel[2].fxp &= 0x0F; }
-    if(cel[3].fxc == 0xE0) { cel[3].fxc |= cel[3].fxp >> 4; cel[3].fxp &= 0x0F; }
+    
+		// Cell 3 is ghetto-crunched, but this saves a byte
+		cel[3].ixp = ((cel[3].fxp & 0x80) ? 0x00 : 0x7F) | ((cel[3].fxp & 0x40) ? 0x80 : 0x00);
+		cel[3].fxp &= 0x3F;
+		switch(cel[3].fxc) {
+			case 0x02:
+			case 0x03: if(cel[3].fxc & 0x01) cel[3].fxp |= 0x40; cel[3].fxp = (cel[3].fxp >> 4) | (cel[3].fxp << 4); cel[3].fxc = 0x70; break;
+			case 0x01: if(cel[3].fxp & 0x08) cel[3].fxp = (cel[3].fxp & 0x07) << 4; cel[3].fxc = 0xA0; break;
+			case 0x04: cel[3].fxc = 0xC0; break;
+			case 0x05: cel[3].fxc = 0xB0; break;
+			case 0x06: cel[3].fxc = 0xD0; break;		
+			case 0x07: cel[3].fxc = 0xF0; break;
+			case 0x08: cel[3].fxc = 0xE7; break;
+			case 0x09: cel[3].fxc = 0xE9; break;
+			case 0x0A: cel[3].fxc = (cel[3].fxp & 0x08) ? 0xEA : 0xEB; cel[3].fxp &= 0x07; break;
+			case 0x0B: cel[3].fxc = (cel[3].fxp & 0x10) ? 0xED : 0xEC; cel[3].fxp &= 0x0F; break;
+			case 0x0C: cel[3].fxc = 0xEE; break;
+		}    
+    
   }
   
   // Quick pointer access
@@ -344,9 +362,6 @@ void SquawkSynth::advance() {
 
     // If first tick
     if(tick == (fx == 0xED ? fxp : 0)) {
-      // Reset oscillators
-      if((p_fxm->vibr.mode & 0x4) == 0x0) p_fxm->vibr.offset = 0;
-      if((p_fxm->trem.mode & 0x4) == 0x0) p_fxm->trem.offset = 0;
 
 			if(ix_period & 0x80) {
         // Reset volume
@@ -354,10 +369,9 @@ void SquawkSynth::advance() {
 			}
 
       if((ix_period & 0x7F) != 0x7F) {
-        if(ch & 2) {
-        	// Reset volume
-        	p_osc->vol = p_fxm->volume = 0x1F;
-       	}
+	      // Reset oscillators
+	      if((p_fxm->vibr.mode & 0x4) == 0x0) p_fxm->vibr.offset = 0;
+	      if((p_fxm->trem.mode & 0x4) == 0x0) p_fxm->trem.offset = 0;
         // Cell has note
         if(fx == 0x30 || fx == 0x50) {
           // Tone-portamento effect setup
@@ -386,7 +400,6 @@ void SquawkSynth::advance() {
           p_osc->vol = p_fxm->volume = MIN(fxp, 0x1F);
           break;
         case 0xD0: // Jump to row
-          fxp = HI4(fxp) * 10 + LO4(fxp);
           if(!pattern_jump) ix_nextorder = ((ix_order + 1) >= pgm_read_byte(&p_play[0]) ? 0x00 : ix_order + 1);
           pattern_jump = true;
           ix_nextrow = (fxp > 63 ? 0 : fxp);
@@ -398,7 +411,7 @@ void SquawkSynth::advance() {
           if(fxp) p_fxm->vibr.fxp = fxp;
           break;
         case 0x70: // Tremolo
-          if( fxp ) p_fxm->trem.fxp = fxp;
+          if(fxp) p_fxm->trem.fxp = fxp;
           break;
         case 0xE1: // Fine slide up
           if(ch != 3) {
@@ -478,7 +491,7 @@ void SquawkSynth::advance() {
           }
       }
     }
-      
+
     // Normal play and arpeggio
     if(fx == 0x00) {
 	    if(ch != 3) {
@@ -497,11 +510,10 @@ void SquawkSynth::advance() {
 	      p_osc->freq = FREQ((p_fxm->period + do_osc(&p_fxm->vibr)));
 	    }
     } else if(fx == 0x70) {
-      // Tremolo
-      temp = p_fxm->volume + do_osc(&p_fxm->trem);
-      p_osc->vol = MAX(MIN(temp, 0x1F), 0);
+      int8_t trem = p_fxm->volume + do_osc(&p_fxm->trem);
+      p_osc->vol = MAX(MIN(trem, 0x1F), 0);
     }
-  
+
     // Next channel
     p_fxm++; p_cel++; p_osc++;
   }

@@ -137,8 +137,6 @@ int main(int argc,char**argv) {
 	uint16_t period;
 	uint8_t temp;
 	
-//	uint16_t stuff[200], ix = 0;
-
 	static unsigned int cols = 0;
 	
 	fprintf(f, "Melody InsertTitleHere[] = {");
@@ -186,48 +184,117 @@ int main(int argc,char**argv) {
 		    
 		    if(fxc[chn] == 0x50 || fxc[chn] == 0x60 || fxc[chn] == 0xA0) {
 		    	fxp[chn] = (fxp[chn] & 0x0F) | ((fxp[chn] >> 1) & 0xF0);
-		    	fxp[chn] = (fxp[chn] & 0xF0) | ((fxp[chn] >> 1) & 0x0F);
+		    	fxp[chn] = (fxp[chn] & 0xF0) | ((fxp[chn] & 0x0F) >> 1);
 		    }
 		    
 		    if(fxc[chn] == 0x70) {
-		    	fxp[chn] = (fxp[chn] & 0xF0) | ((fxp[chn] >> 1) & 0x0F);
+		    	fxp[chn] = (fxp[chn] & 0xF0) | ((fxp[chn] & 0x0F) >> 1);
 		    }
 
 		    if(fxc[chn] == 0xC0 || fxc[chn] == 0xEA || fxc[chn] == 0xEB) {
 		    	fxp[chn] >>= 1;
 		   	}
-
-				if((fxc[chn] & 0xF0) == 0xE0) {
-					fxp[chn] |= fxc[chn] << 4;
-				}
-				fxc[chn] >>= 4;
-		 		
-		    //if(note[chn] != 0x7F) printf("%i ", note[chn]);
 		   	
-/*		    	
-		    if(period != 0) {
-		    	for(n = 0; n < ix; n++) {
-		    		if(stuff[n] == period) break;
-		    	}
-		    	if(n == ix) {
-		    		stuff[ix++] = period;
-		    		printf("%i ", period);
-		    	}
-		    }
+		   	if(fxc[chn] == 0xD0) {
+		   		fxp[chn] = ((fxp[chn] >> 4) * 10) | (fxp[chn] & 0x0F);
+		   	}
 
-		    //ix_period = 0x7F;                    // period index
-/*
-		    if( temp_w ) {
-		      for( temp_b = 0; temp_b != 36; temp_b++ ) {
-		        if( ROM_READW( &period_tbl[ 0 ][ temp_b ] ) == temp_w ) {
-		          ix_period = temp_b;
-		          break;
-		        }
-		      }
-		    }
-*/
+				if(fxc[chn] == 0xF0) {
+					if(fxp[chn] > 0x20) {
+						printf("[%02X][%02X][%01X] Set tempo not supported\n", ptn, row, chn);
+					}
+				} else if(fxc[chn] == 0xEF) {
+					printf("[%02X][%02X][%01X] Funk-it not supported\n", ptn, row, chn);
+				} else if(fxc[chn] == 0x80) {
+					printf("[%02X][%02X][%01X] Panning not supported\n", ptn, row, chn);
+				} else if(fxc[chn] == 0xE5) {
+					printf("[%02X][%02X][%01X] Fine-tune not supported\n", ptn, row, chn);
+				} else if(fxc[chn] == 0xE6) {
+					printf("[%02X][%02X][%01X] Advanced looping not supported\n", ptn, row, chn);
+				} else if(fxc[chn] == 0xE8) {
+					printf("[%02X][%02X][%01X] Panning not supported\n", ptn, row, chn);
+				} else if(fxc[chn] == 0x90) {
+					printf("[%02X][%02X][%01X] Sample offset not supported\n", ptn, row, chn);
+				}
+
+				if(chn != 3) {
+					if((fxc[chn] & 0xF0) == 0xE0) {
+						fxp[chn] |= fxc[chn] << 4;
+					}
+					fxc[chn] >>= 4;		 		
+				}
 
 			}
+
+			switch(fxc[3]) {
+				case 0x50:
+				case 0x60:
+				case 0xA0:
+					fxc[3] = 0x1;
+					if((fxp[3] >> 4) == (fxp[3] & 0x0F)) {
+						if((fxp[3] && 0x0F) != 0) {
+							printf("[%02X][%02X][%01X] Slide parameter combination not supported on ch 4\n", ptn, row, chn);
+						}
+					}						
+					if((fxp[3] >> 4) >= (fxp[3] & 0x0F)) {
+						fxp[3] = 0x80 + ((fxp[3] >> 4) - (fxp[3] & 0x0F));
+					} else {
+						fxp[3] = ((fxp[3] & 0x0F) - (fxp[3] >> 4));
+					}
+					break;
+				case 0x70:
+					fxc[3] = (fxp[3] & 0x4) ? 0x3 : 0x2;
+					fxp[3] = (fxp[3] >> 4) | ((fxp[3] & 0x03) << 4);
+					break;
+				case 0xC0:
+					fxc[3] = 0x4;
+					fxp[3] &= 0x1F;
+					break;
+				case 0xB0:
+					fxc[3] = 0x5;
+					fxp[3] &= 0x1F;
+					break;
+				case 0xD0:
+					fxc[3] = 0x6;
+					if(fxp[3] > 63) fxp[3] = 0;
+					break;
+				case 0xF0:
+					if(fxp[3] > 0x20) {
+						fxc[3] = 0x0;
+						fxp[3] = 0x00;
+					} else {
+						fxc[3] = 0x7;							
+					}
+					break;
+				case 0xE7:
+					fxc[3] = 0x8;
+					break;
+				case 0xE9:
+					fxc[3] = 0x9;
+					break;
+				case 0xEA:
+					fxc[3] = 0xA;
+					fxp[3] |= 0x08;
+					break;
+				case 0xEB:
+					fxc[3] = 0xA;
+					break;
+				case 0xEC:
+					fxc[3] = 0xB;
+					break;
+				case 0xED:
+					fxc[3] = 0xB;
+					fxp[3] |= 0x10;
+					break;
+				case 0xEE:
+					fxc[3] = 0xC;
+					break;
+				default:
+					fxc[3] = 0;
+					fxp[3] = 0;
+			}
+			if(note[3] != 0x7F) fxp[3] |= 0x80;
+			if(sample[3]) fxp[3] |= 0x40;
 
 			HOUT( (fxc[0]) | fxc[1] << 4 );
 			HOUT( fxp[0] );
@@ -235,43 +302,13 @@ int main(int argc,char**argv) {
 			HOUT( (fxc[2]) | fxc[3] << 4 );
 			HOUT( fxp[2] );
 			HOUT( fxp[3] );
-			HOUT( note[0] | (sample[0] == 0  ? 0x00 : 0x80) );
-			HOUT( note[1] | (sample[1] == 0  ? 0x00 : 0x80) );
-			HOUT( note[2] | (note[3] == 0x7F ? 0x00 : 0x80) );
-			
+			HOUT( note[0] | (sample[0] == 0 ? 0x00 : 0x80) );
+			HOUT( note[1] | (sample[1] == 0 ? 0x00 : 0x80) );
+			HOUT( note[2] | (sample[2] == 0 ? 0x00 : 0x80) );
+
 		}
 	}	
 	fprintf(f, "\n};\n");	
-	
-
-/*	
-  printf("\n\n%i\n", ix);
-  unsigned int a,b;
-  for(a = 0; a < ix - 1; a++) {
-    for(b = a + 1; b < ix; b++) {
-    	if(stuff[a] < stuff[b]) {
-    		stuff[a] = stuff[a] ^ stuff[b];
-    		stuff[b] = stuff[a] ^ stuff[b];
-    		stuff[a] = stuff[a] ^ stuff[b];
-    	}
-    }
-  }
-  for(n = 0; n < ix; n++) {
-  	if((n % 12) == 0) printf("\n");
-  	printf("%i, ", stuff[n]);
-	}
-*/
-
-/*
-typedef struct __attribute__((packed)) {
-  int8_t   name[ 20 ];    // Name
-  pts_t    sample[ 31 ];  // Samples
-  uint8_t  order_count;   // Song length
-  uint8_t  historical;    // For compatibility (always 0x7F)
-  uint8_t  order[ 128 ];  // Pattern order list
-  int8_t   ident[ 4 ];    // Identifier (always "M.K.")
-} protracker_head_t;
-	*/
 
 	fclose(f);
 	free(data);
