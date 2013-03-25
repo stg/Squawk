@@ -3,6 +3,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
+#ifdef WIN32
+#include <windows.h>
+#endif
 
 // ProTracker module header
 typedef struct __attribute__((packed)) {
@@ -63,6 +66,17 @@ static const uint16_t period_tbl[84] = {
     53,   50,   47,   45,   42,   40,   37,   35,   33,   31,   30,   28,
 };
 
+
+void alert(char *str, int argc) {
+#ifdef WIN32
+  if(argc != 3) {
+    MessageBox(NULL, str, "Squawk Converter", MB_OK); 
+    return;
+  }
+#endif
+  printf("%s", str);
+}
+
 int main(int argc,char**argv) {
   uint8_t *data, *p_data, *p_out;
   FILE *f;
@@ -72,16 +86,40 @@ int main(int argc,char**argv) {
   unsigned int n, z;
   uint8_t patterns;
 
+#ifndef WIN32
   // Check parameter count
   if(argc != 3) {
-    printf("Useage:\n\t%s [input].mod [output].c\n", argv[0]);
+    printf("Usage:\n\t%s [input].mod [output].c\n", argv[0]);
     return 1;
   }
+#endif
 
   // Open file
-  data = blob(argv[1], &filesize);
+  if(argc > 1) {
+    // Open file
+    data = blob(argv[1], &filesize);
+#ifdef WIN32
+  } else {
+    char szFileName[MAX_PATH];
+    OPENFILENAME ofn; 
+    szFileName[0] = '\0'; 
+    memset(&ofn, 0, sizeof(ofn)); 
+    ofn.lStructSize = sizeof(ofn); 
+    ofn.hwndOwner = NULL; 
+    ofn.lpstrFile = szFileName; 
+    ofn.nMaxFile = sizeof(szFileName); 
+    ofn.hInstance = NULL; 
+    ofn.lpstrFilter = TEXT("Squawk c-array (*.txt)\0*.txt\0All Files (*.*)\0*.*\0\0");
+    ofn.nFilterIndex = 1;  
+    ofn.Flags= OFN_FILEMUSTEXIST;
+    int bRes; 
+    if(GetOpenFileName(&ofn) == 0) return 1;
+    // Open file
+    data = blob(szFileName, &filesize);
+#endif
+  }
   if(!data || filesize == 0) {
-    printf("Unable to open input file\n");
+    alert("Unable to open input file\n", argc);
     return 1;
   }
 
@@ -95,11 +133,11 @@ int main(int argc,char**argv) {
 
   // Check file size
   if(arrcount < 608) {
-      printf("Input file is too small\n");
+      alert("Input file is too small\n", argc);
       free(data);
       return 1;
   } else if(((unsigned int)((arrcount - 32) / 9)) * 9 != arrcount - 32) {
-      printf("Input file has incorrect size\n");
+      alert("Input file has incorrect size\n", argc);
       free(data);
       return 1;
   }
@@ -107,7 +145,7 @@ int main(int argc,char**argv) {
   // Memory for data
   uint8_t *tempdata = malloc(arrcount);
   if(!tempdata) {
-    printf("Out of memory\n");
+    alert("Out of memory\n", argc);
     free(data);
     return 1;
   }
@@ -151,9 +189,31 @@ int main(int argc,char**argv) {
   memcpy(head.ident, "M.K.", 4);
 
   // Time to start writing output
-  f = fopen(argv[2], "wb");
+  if(argc > 2) {
+    f = fopen(argv[2], "wb");
+#ifdef WIN32
+  } else {
+    char szFileName[MAX_PATH];
+    OPENFILENAME ofn; 
+    szFileName[0] = '\0'; 
+    memset(&ofn, 0, sizeof(ofn)); 
+    ofn.lStructSize = sizeof(ofn); 
+    ofn.hwndOwner = NULL; 
+    ofn.lpstrFile = szFileName; 
+    ofn.nMaxFile = sizeof(szFileName); 
+    ofn.hInstance = NULL; 
+    ofn.lpstrFilter = TEXT("ProTracker modules (*.mod)\0*.mod\0All Files (*.*)\0*.*\0\0"); 
+    ofn.lpstrDefExt = "mod";
+    ofn.nFilterIndex = 1;  
+    ofn.Flags= OFN_OVERWRITEPROMPT | OFN_NOREADONLYRETURN;
+    int bRes; 
+    if(GetSaveFileName(&ofn) == 0) return 1;
+    // Open file
+    f = fopen(szFileName, "wb");
+#endif
+  }
   if(!f) {
-    printf("Unable to open output file\n");
+    alert("Unable to open output file\n", argc);
     free(data);
     return 1;
   }
@@ -205,6 +265,17 @@ int main(int argc,char**argv) {
       uint8_t  parameter;
       uint8_t  crunch[4];
 
+      // Crunch volume/decimal commands
+      if(cel[z].fxc == 0x50 || cel[z].fxc == 0x60 || cel[z].fxc == 0xA0) {
+        cel[z].fxp = (cel[z].fxp & 0x77) << 1;
+      } else if(cel[z].fxc == 0x70) {
+        cel[z].fxp = (cel[z].fxp & 0xF0) | ((cel[z].fxp & 0x07) << 1);
+      } else if(cel[z].fxc == 0xC0 || cel[z].fxc == 0xEA || cel[z].fxc == 0xEB) {
+        cel[z].fxp <<= 1;
+      } else if(cel[z].fxc == 0xD0) {
+        cel[z].fxp = (((uint8_t)(cel[z].fxp / 10)) << 4) | ((uint8_t)(cel[z].fxp % 10));
+      }      
+
       // Convert to ProTracker values
       if((cel[z].fxc >> 4) == 0x0E) {
         parameter = cel[z].fxp | (cel[z].fxc << 4);
@@ -215,6 +286,8 @@ int main(int argc,char**argv) {
       sample = (cel[z].ixp & 0x80) ? z + 1 : 0;
       if((cel[z].ixp & 0x7F) == 0x7F) period = 0;
       else period = ((z == 3) ? 113 : period_tbl[cel[z].ixp & 0x7F]);
+
+
 
       // Crunch cell and write
       crunch[0] = sample & 0xF0 | (period >> 8);
@@ -245,5 +318,10 @@ int main(int argc,char**argv) {
 
   fclose(f);
   free(data);
+
+#ifdef WIN32
+  if(argc != 3) alert("Conversion successful!", argc);
+#endif
+
   return 0;
 }

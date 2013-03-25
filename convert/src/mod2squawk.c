@@ -3,6 +3,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <string.h>
+#ifdef WIN32
+#include <windows.h>
+#endif
 
 // ProTracker module header
 typedef struct __attribute__((packed)) {
@@ -58,31 +61,79 @@ static const uint16_t period_tbl[84] = {
     53,   50,   47,   45,   42,   40,   37,   35,   33,   31,   30,   28,
 };
 
+void alert(char *str, int argc) {
+#ifdef WIN32
+  if(argc != 3) {
+    MessageBox(NULL, str, "Squawk Converter", MB_OK); 
+    return;
+  }
+#endif
+  printf("%s", str);
+}
+
+bool confirm(char *str, int argc) {
+  char resp;
+#ifdef WIN32
+  if(argc != 3) {
+    return MessageBox(NULL, str, "Squawk Converter", MB_YESNO) == IDYES;
+  }
+#endif
+  printf("%s ", str);
+  do {
+    resp = toupper(getchar());
+  } while(resp != 'N' && resp != 'Y');
+  printf("%c\n", resp);
+  return resp == 'Y';
+}
+
 int main(int argc,char**argv) {
-  uint8_t *data;
+  uint8_t *data = NULL;
   FILE *f;
   protracker_head_t *head;
   size_t filesize;
   char name[24];
   unsigned int n;
-  uint8_t patterns;
+  uint8_t patterns = 0;
   
+#ifndef WIN32
   // Check parameter count
   if(argc != 3) {
-    printf("Useage:\n\t%s [input].mod [output].c\n", argv[0]);
+    printf("Usage:\n\t%s [input].mod [output].c\n", argv[0]);
     return 1;
   }
-  
-  // Open file
-  data = blob(argv[1], &filesize);
+#endif
+
+  if(argc > 1) {
+    // Open file
+    data = blob(argv[1], &filesize);
+#ifdef WIN32
+  } else {
+    char szFileName[MAX_PATH];
+    OPENFILENAME ofn; 
+    szFileName[0] = '\0'; 
+    memset(&ofn, 0, sizeof(ofn)); 
+    ofn.lStructSize = sizeof(ofn); 
+    ofn.hwndOwner = NULL; 
+    ofn.lpstrFile = szFileName; 
+    ofn.nMaxFile = sizeof(szFileName); 
+    ofn.hInstance = NULL; 
+    ofn.lpstrFilter = TEXT("ProTracker modules (*.mod)\0*.mod\0All Files (*.*)\0*.*\0\0"); 
+    ofn.nFilterIndex = 1;  
+    ofn.Flags= OFN_FILEMUSTEXIST;
+    int bRes; 
+    if(GetOpenFileName(&ofn) == 0) return 1;
+    // Open file
+    data = blob(szFileName, &filesize);
+#endif
+  }
   if(!data || filesize == 0) {
-    printf("Unable to open input file\n");
+    alert("Unable to open input file\n", argc);
     return 1;
   }
   
   // Check file size
   if(filesize < sizeof(protracker_head_t)) {
-      printf("Input file is too small\n");
+      alert("Input file is too small\n", argc);
       free(data);
       return 1;
   }
@@ -92,13 +143,7 @@ int main(int argc,char**argv) {
   // Check identifier
   trim(memcpy(name, head->ident, 4), 4);
   if(strcmp(name, "M.K.") != 0) {
-    printf("Module is not marked \"M.K.\", continue [Y/N]? ");
-    char resp;
-    do {
-      resp = toupper(getch());
-    } while(resp != 'N' && resp != 'Y');
-    printf("%c\n", resp);
-    if(resp == 'N') {
+    if(!confirm("Module is not marked \"M.K.\", continue [Y/N]?", argc)) {
       free(data);
       return 1;
     }
@@ -117,22 +162,44 @@ int main(int argc,char**argv) {
 
   // Validate pattern count
   if(patterns > 31 || head->order_count > 31) {
-    printf("Count(s) exceed maximum\n");
+    alert("Pattern or order count exceed maximum\n", argc);
     free(data);
     return 1;
   }
 
   // Check file size again
   if(filesize < sizeof(protracker_head_t) + 1024 * patterns) {
-    printf("File size does not match pattern count!\n");
+    alert("File size does not match pattern count!\n", argc);
     free(data);
     return 1;
   }
 
   // Time to start writing output
-  f = fopen(argv[2], "wb");
+  if(argc > 2) {
+    f = fopen(argv[2], "wb");
+#ifdef WIN32
+  } else {
+    char szFileName[MAX_PATH];
+    OPENFILENAME ofn; 
+    szFileName[0] = '\0'; 
+    memset(&ofn, 0, sizeof(ofn)); 
+    ofn.lStructSize = sizeof(ofn); 
+    ofn.hwndOwner = NULL; 
+    ofn.lpstrFile = szFileName; 
+    ofn.nMaxFile = sizeof(szFileName); 
+    ofn.hInstance = NULL; 
+    ofn.lpstrFilter = TEXT("Squawk c-array (*.txt)\0*.txt\0All Files (*.*)\0*.*\0\0");
+    ofn.lpstrDefExt = "txt";
+    ofn.nFilterIndex = 1;  
+    ofn.Flags= OFN_OVERWRITEPROMPT | OFN_NOREADONLYRETURN;
+    int bRes; 
+    if(GetSaveFileName(&ofn) == 0) return 1;
+    // Open file
+    f = fopen(szFileName, "wb");
+#endif
+  }
   if(!f) {
-    printf("Unable to open output file\n");
+    alert("Unable to open output file\n", argc);
     free(data);
     return 1;
   }
@@ -192,10 +259,9 @@ int main(int argc,char**argv) {
           }
         }
         
-        // Crunch volume commands
+        // Crunch volume/decimal commands
         if(fxc[chn] == 0x50 || fxc[chn] == 0x60 || fxc[chn] == 0xA0) {
-          fxp[chn] = (fxp[chn] & 0x0F) | ((fxp[chn] >> 1) & 0xF0);
-          fxp[chn] = (fxp[chn] & 0xF0) | ((fxp[chn] & 0x0F) >> 1);
+          fxp[chn] = (fxp[chn] >> 1) & 0x77;
         } else if(fxc[chn] == 0x70) {
           fxp[chn] = (fxp[chn] & 0xF0) | ((fxp[chn] & 0x0F) >> 1);
         } else if(fxc[chn] == 0xC0 || fxc[chn] == 0xEA || fxc[chn] == 0xEB) {
@@ -319,5 +385,14 @@ int main(int argc,char**argv) {
 
   fclose(f);
   free(data);
+
+#ifdef WIN32
+  if(argc != 3) {
+    printf("Conversion successful!\n");
+    printf("Press any key to quit");
+    getch();
+  }
+#endif  
+
   return 0;
 }
