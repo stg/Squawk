@@ -8,12 +8,50 @@
 #include <stddef.h>
 #include <inttypes.h>
 #include "Arduino.h"
-
+/*
+#include <SD.h>
+*/
 #define Melody const uint8_t PROGMEM
 
 extern void squawk_playroutine() asm("squawk_playroutine");
+/*
+class ProgramMemoryFile : public File {
+  private:
+    uint8_t *p_start;
+    uint8_t *p_end;
+    uint8_t *p_cursor;
+
+  public:
+    ProgramMemoryFile(const uint8_t *p_rom, size_t rom_size);
+    virtual size_t write(uint8_t);
+    virtual int read();
+    virtual int peek();
+    virtual int available();
+    virtual void flush();
+    boolean seek(uint32_t pos);
+    uint32_t position();
+    uint32_t size();
+    void close();
+    char * name();
+    boolean isDirectory(void);
+    File openNextFile(uint8_t mode = O_RDONLY);
+    void rewindDirectory(void);
+    using Print::write;
+    
+};
+*/
+
+class SquawkStream {
+	public:
+    virtual uint8_t read() { return 0; };
+    virtual void seek(size_t offset) {};
+};
 
 class SquawkSynth {
+
+protected:
+  // Load and play specified melody
+  void play(SquawkStream *melody);
 
 public:
   SquawkSynth() {};
@@ -25,7 +63,7 @@ public:
   // melody needs to point to PROGMEM data
   void play(const uint8_t *melody);
   
-  // Play the currently loaded melody
+  // Resume currently loaded melody (or enable direct osc manipulation by sketch)
   void play();
     
   // Pause playback
@@ -113,7 +151,7 @@ ISR(TIMER1_COMPA_vect, ISR_NAKED) { \
     "push r1                                          " "\n\t" \
     "push r2                                          " "\n\t" \
     "in   r2,                    __SREG__             " "\n\t" \
- \
+\
     "lds  r18,                   osc+2*%[mul]+%[fre]  " "\n\t" \
     "lds  r0,                    osc+2*%[mul]+%[pha]  " "\n\t" \
     "add  r0,                    r18                  " "\n\t" \
@@ -122,7 +160,7 @@ ISR(TIMER1_COMPA_vect, ISR_NAKED) { \
     "lds  r1,                    osc+2*%[mul]+%[pha]+1" "\n\t" \
     "adc  r1,                    r18                  " "\n\t" \
     "sts  osc+2*%[mul]+%[pha]+1, r1                   " "\n\t" \
- \
+\
     "mov  r27,                   r1                   " "\n\t" \
     "sbrc r27,                   7                    " "\n\t" \
     "com  r27                                         " "\n\t" \
@@ -132,7 +170,7 @@ ISR(TIMER1_COMPA_vect, ISR_NAKED) { \
     "muls r27,                   r26                  " "\n\t" \
     "lsl  r1                                          " "\n\t" \
     "mov  r26,                   r1                   " "\n\t" \
- \
+\
     "lds  r18,                   osc+0*%[mul]+%[fre]  " "\n\t" \
     "lds  r0,                    osc+0*%[mul]+%[pha]  " "\n\t" \
     "add  r0,                    r18                  " "\n\t" \
@@ -141,7 +179,7 @@ ISR(TIMER1_COMPA_vect, ISR_NAKED) { \
     "lds  r1,                    osc+0*%[mul]+%[pha]+1" "\n\t" \
     "adc  r1,                    r18                  " "\n\t" \
     "sts  osc+0*%[mul]+%[pha]+1, r1                   " "\n\t" \
- \
+\
     "mov  r18,                   r1                   " "\n\t" \
     "lsl  r18                                         " "\n\t" \
     "and  r18,                   r1                   " "\n\t" \
@@ -149,7 +187,7 @@ ISR(TIMER1_COMPA_vect, ISR_NAKED) { \
     "sbrc r18,                   7                    " "\n\t" \
     "neg  r27                                         " "\n\t" \
     "add  r26,                   r27                  " "\n\t" \
- \
+\
     "lds  r18,                   osc+1*%[mul]+%[fre]  " "\n\t" \
     "lds  r0,                    osc+1*%[mul]+%[pha]  " "\n\t" \
     "add  r0,                    r18                  " "\n\t" \
@@ -217,8 +255,8 @@ ISR(TIMER1_COMPA_vect, ISR_NAKED) { \
 	  "push r31                                         " "\n\t" \
 \
     "clr  r1                                          " "\n\t" \
-    "rcall squawk_playroutine                         " "\n\t" \
-\	  
+    "call squawk_playroutine                          " "\n\t" \
+\
 	  "pop  r31                                         " "\n\t" \
 	  "pop  r30                                         " "\n\t" \
 	  "pop  r25                                         " "\n\t" \

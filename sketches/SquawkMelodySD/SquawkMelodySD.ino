@@ -1,0 +1,57 @@
+/* === SQUAWK MELODY ON SD-CARD PLAYER EXAMPLE === */
+
+#include <Squawk.h>
+#include <SD.h>
+#include <SquawkSD.h>
+
+/*
+Since Timer0 is used for Arduino functionality, such as delay() it is not
+recommended to use a pin that relies on this timer for output, as Squawk
+needs to reconfigure the timer for higher-speed, which modifies how these
+Arduino internals behave. Uncomment the correct line below, depending on
+which Arduino you intend to run the code on.
+
+Note: You CAN use any pin, if you do not rely on Timer0 related things.
+      This sketch uses delay() so we need to steer clear of Timer0.
+
+Leonardo
+  use SQUAWK_PWM_PIN5 (it's on Timer3)
+  
+Uno, Due(milanove), Diecimila, Nano, Mini or LilyPad
+  use SQUAWK_PWM_PIN11
+  or  SQUAWK_PWM_PIN3 (both are on Timer2)
+  
+Others
+  not yet supported, you'll have to try and see what happens ;)
+*/
+
+// Configure Squawk for PWM output, and construct suitable ISR.
+//SQUAWK_CONSTRUCT_ISR(SQUAWK_PWM_PIN3)
+//SQUAWK_CONSTRUCT_ISR(SQUAWK_PWM_PIN5)
+//SQUAWK_CONSTRUCT_ISR(SQUAWK_PWM_PIN11)
+
+// Chip select pin for SD card (it's 4 on the ethernet shield)
+const int chipSelect = 10;
+
+// Initialize Squawk
+void setup() {
+  // The default SD card chip select pin must be output
+  pinMode(10, OUTPUT);
+  // Set up Squawk to generate samples at 32kHz.
+  // Squawk always steals Timer1 for sample crunching.
+  SquawkSD.begin(32000);
+  // Initialize the SD card  
+  if (SD.begin(chipSelect)) {
+    // Open a file on the SD card
+    File melody = SD.open("melody.sqm");
+    // Begin playback of file
+    SquawkSD.play(melody);
+  } else {
+    // SD card did not initialize, play some noise
+    osc[3].vol = 0x0F;
+  }
+}
+
+void loop() {
+  // Do whatever you want
+}

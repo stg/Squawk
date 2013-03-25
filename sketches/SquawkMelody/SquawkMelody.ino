@@ -38,7 +38,7 @@ void setup() {
   // Set up Squawk to generate samples at 32kHz.
   // Squawk always steals Timer1 for sample crunching.
   Squawk.begin(32000);
-  // Begin playback of melody_data.
+  // Begin playback of melody.
   Squawk.play(TheOriginalSquawk);
   // Tune the song to something more suitable for a piezo
   Squawk.tune(1.6);

@@ -16,6 +16,16 @@
 #define MAX(A, B) ((A) > (B) ? (A) : (B))
 #define FREQ(PERIOD) (ch == 2 ? (tuning_long / PERIOD) >> 2 : (tuning_long / PERIOD))
 
+class StreamROM : public SquawkStream {
+  private:
+    uint8_t *p_start;
+    uint8_t *p_cursor;
+	public:
+		StreamROM(const uint8_t *p_rom = NULL) { p_start = p_cursor = (uint8_t*)p_rom; }
+    virtual uint8_t read() { return pgm_read_byte(p_cursor++); }
+    virtual void seek(size_t offset) { p_cursor = p_start + offset; }
+};
+
 // Oscillator memory
 typedef struct {
   uint8_t fxp;
@@ -55,8 +65,13 @@ static uint32_t tuning_long;
 static uint16_t sample_rate;
 static float    tuning = 1.0;
 static uint16_t tick_rate = 50;
-
-static const uint8_t *p_play;
+static uint8_t  order[32];
+//static const uint8_t *p_rom;
+static SquawkStream *stream;
+static StreamROM rom;
+/*
+static File *p_file;
+*/
 
 // Exports
 Oscillator osc[4];
@@ -249,15 +264,23 @@ void SquawkSynth::begin(uint16_t hz) {
 }
 
 void SquawkSynth::play() {
-  TIMSK1 |= 1 << OCIE1A; // Enable interrupt
+  TIMSK1 = 1 << OCIE1A; // Enable interrupt
+}
+
+void SquawkSynth::play(SquawkStream *melody) {
+  uint8_t n;
+  pause();
+  stream = melody;
+  stream->seek(0);
+  for(n = 0; n < 32; n++) order[n] = stream->read();
+  playroutine_reset();
+  play();
 }
 
 void SquawkSynth::play(const uint8_t *melody) {
-  cli();
-  p_play = melody;
-  playroutine_reset();
-  sei();
-  play();
+	pause();
+	rom = StreamROM(melody);
+  play(&rom);
 }
 
 void SquawkSynth::pause() {
@@ -266,14 +289,15 @@ void SquawkSynth::pause() {
 
 void SquawkSynth::stop() {
   pause();
-  p_play = NULL; // Unload melody
+  //p_rom = NULL; // Unload melody
+  order[0] = 0; // Unload melody
 }
 
 // Progress module by one tick
 void squawk_playroutine() {
   static bool lockout = false;
 
-  if(!p_play) return;
+  if(!order[0]) return;
     
   // Protect from re-entry via ISR
   cli();
@@ -296,7 +320,7 @@ void squawk_playroutine() {
     if(tick == 0) {
       if(++ix_row == 64) {
         ix_row = 0;
-        if(++ix_order == pgm_read_byte(p_play)) ix_order = 0;
+        if(++ix_order >= order[0]) ix_order = 0;
         deconstruct = true;
       }
       // Forced order/row
@@ -316,7 +340,22 @@ void squawk_playroutine() {
     if(deconstruct) {
       const uint8_t *p_data;
       uint8_t data;
-      p_data = &p_play[32 + ((pgm_read_byte(&p_play[1 + ix_order]) << 6) + ix_row) * 9];
+      //p_data = &p_rom[32 + ((order[1 + ix_order] << 6) + ix_row) * 9];
+      stream->seek(32 + ((order[1 + ix_order] << 6) + ix_row) * 9);
+      data = stream->read(); cel[0].fxc  =  data << 0x04;
+                            cel[1].fxc  =  data &  0xF0;
+      data = stream->read(); cel[0].fxp  =  data;
+      data = stream->read(); cel[1].fxp  =  data;
+      data = stream->read(); cel[2].fxc  =  data << 0x04;
+                            cel[3].fxc  =  data >> 0x04;
+      data = stream->read(); cel[2].fxp  =  data;
+      data = stream->read(); cel[3].fxp  =  data;
+      data = stream->read(); cel[0].ixp  =  data;
+      data = stream->read(); cel[1].ixp  =  data;
+      data = stream->read(); cel[2].ixp  =  data;
+  
+      
+/*
       data = pgm_read_byte(  p_data); cel[0].fxc  =  data << 0x04;
                                       cel[1].fxc  =  data &  0xF0;
       data = pgm_read_byte(++p_data); cel[0].fxp  =  data;
@@ -328,7 +367,7 @@ void squawk_playroutine() {
       data = pgm_read_byte(++p_data); cel[0].ixp  =  data;
       data = pgm_read_byte(++p_data); cel[1].ixp  =  data;
       data = pgm_read_byte(++p_data); cel[2].ixp  =  data;
-  
+*/  
       if(cel[0].fxc == 0xE0) { cel[0].fxc |= cel[0].fxp >> 4; cel[0].fxp &= 0x0F; }
       if(cel[1].fxc == 0xE0) { cel[1].fxc |= cel[1].fxp >> 4; cel[1].fxp &= 0x0F; }
       if(cel[2].fxc == 0xE0) { cel[2].fxc |= cel[2].fxp >> 4; cel[2].fxp &= 0x0F; }
@@ -412,7 +451,7 @@ void squawk_playroutine() {
             if(fxp) p_fxm->port_speed = fxp;
             break;
           case 0xB0: // Jump to pattern
-            ix_nextorder = (fxp >= pgm_read_byte(&p_play[0]) ? 0x00 : fxp);
+            ix_nextorder = (fxp >= order[0] ? 0x00 : fxp);
             ix_nextrow = 0;
             pattern_jump = true;
             break;
@@ -420,7 +459,7 @@ void squawk_playroutine() {
             p_osc->vol = p_fxm->volume = MIN(fxp, 0x1F);
             break;
           case 0xD0: // Jump to row
-            if(!pattern_jump) ix_nextorder = ((ix_order + 1) >= pgm_read_byte(&p_play[0]) ? 0x00 : ix_order + 1);
+            if(!pattern_jump) ix_nextorder = ((ix_order + 1) >= order[0] ? 0x00 : ix_order + 1);
             pattern_jump = true;
             ix_nextrow = (fxp > 63 ? 0 : fxp);
             break;
@@ -484,8 +523,6 @@ void squawk_playroutine() {
             temp = tick; while(temp >= fxp) temp -= fxp;
             if(!temp) {
               if(ch == 3) {
-                // umm... this is not atomic and the lfsr will not reset properly
-                // every other few hundred retrigs. live with it or go cli()?
                 p_osc->freq = p_osc->phase = 0x2000;
               } else {
                 p_osc->phase = 0;
@@ -540,3 +577,52 @@ void squawk_playroutine() {
   }
   lockout = false;
 }
+
+
+/*
+static char romname[] = "";
+
+ProgramMemoryFile::ProgramMemoryFile(const uint8_t *p_rom, size_t rom_size) {
+  p_start = p_cursor = (uint8_t*)p_rom;
+  p_end = (uint8_t*)p_rom + rom_size;
+}
+
+int ProgramMemoryFile::read() {
+  if(p_cursor < p_end) return pgm_read_byte(p_cursor++);
+  return -1;
+};
+
+int ProgramMemoryFile::peek() {
+  if(p_cursor < p_end) return pgm_read_byte(p_cursor);
+  return -1;
+};
+
+boolean ProgramMemoryFile::seek(uint32_t pos) {
+  if(pos <= size()) {
+    p_cursor = p_start + pos;
+    return true;
+  }
+  return false;
+};
+
+uint32_t ProgramMemoryFile::position() {
+  return p_cursor - p_start;
+};
+
+uint32_t ProgramMemoryFile::size() {
+  return p_end - p_start;
+};
+
+int ProgramMemoryFile::available() {
+  return p_end - p_cursor;
+};
+
+// Dummy stuff
+size_t  ProgramMemoryFile::write(uint8_t) { return 0; };
+void    ProgramMemoryFile::flush() {};
+void    ProgramMemoryFile::close() {};
+char   *ProgramMemoryFile::name() { return romname; };
+boolean ProgramMemoryFile::isDirectory(void) { return false; };
+File    ProgramMemoryFile::openNextFile(uint8_t mode) { return File(); };
+void    ProgramMemoryFile::rewindDirectory(void) {};
+*/
