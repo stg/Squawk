@@ -66,7 +66,6 @@ static uint16_t sample_rate;
 static float    tuning = 1.0;
 static uint16_t tick_rate = 50;
 static uint8_t  order[32];
-//static const uint8_t *p_rom;
 static SquawkStream *stream;
 static StreamROM rom;
 /*
@@ -287,7 +286,6 @@ void SquawkSynth::pause() {
 
 void SquawkSynth::stop() {
   pause();
-  //p_rom = NULL; // Unload melody
   order[0] = 0; // Unload melody
 }
 
@@ -338,34 +336,19 @@ void squawk_playroutine() {
     if(deconstruct) {
       const uint8_t *p_data;
       uint8_t data;
-      //p_data = &p_rom[32 + ((order[1 + ix_order] << 6) + ix_row) * 9];
       stream->seek(32 + ((order[1 + ix_order] << 6) + ix_row) * 9);
       data = stream->read(); cel[0].fxc  =  data << 0x04;
-                            cel[1].fxc  =  data &  0xF0;
+                             cel[1].fxc  =  data &  0xF0;
       data = stream->read(); cel[0].fxp  =  data;
       data = stream->read(); cel[1].fxp  =  data;
       data = stream->read(); cel[2].fxc  =  data << 0x04;
-                            cel[3].fxc  =  data >> 0x04;
+                             cel[3].fxc  =  data >> 0x04;
       data = stream->read(); cel[2].fxp  =  data;
       data = stream->read(); cel[3].fxp  =  data;
       data = stream->read(); cel[0].ixp  =  data;
       data = stream->read(); cel[1].ixp  =  data;
       data = stream->read(); cel[2].ixp  =  data;
-  
-      
-/*
-      data = pgm_read_byte(  p_data); cel[0].fxc  =  data << 0x04;
-                                      cel[1].fxc  =  data &  0xF0;
-      data = pgm_read_byte(++p_data); cel[0].fxp  =  data;
-      data = pgm_read_byte(++p_data); cel[1].fxp  =  data;
-      data = pgm_read_byte(++p_data); cel[2].fxc  =  data << 0x04;
-                                      cel[3].fxc  =  data >> 0x04;
-      data = pgm_read_byte(++p_data); cel[2].fxp  =  data;
-      data = pgm_read_byte(++p_data); cel[3].fxp  =  data;
-      data = pgm_read_byte(++p_data); cel[0].ixp  =  data;
-      data = pgm_read_byte(++p_data); cel[1].ixp  =  data;
-      data = pgm_read_byte(++p_data); cel[2].ixp  =  data;
-*/  
+
       if(cel[0].fxc == 0xE0) { cel[0].fxc |= cel[0].fxp >> 4; cel[0].fxp &= 0x0F; }
       if(cel[1].fxc == 0xE0) { cel[1].fxc |= cel[1].fxp >> 4; cel[1].fxp &= 0x0F; }
       if(cel[2].fxc == 0xE0) { cel[2].fxc |= cel[2].fxp >> 4; cel[2].fxp &= 0x0F; }
