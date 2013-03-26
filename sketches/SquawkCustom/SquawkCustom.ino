@@ -26,7 +26,7 @@ Others
 // Configure Squawk for PWM output, and construct suitable ISR.
 //SQUAWK_CONSTRUCT_ISR(SQUAWK_PWM_PIN3)
 //SQUAWK_CONSTRUCT_ISR(SQUAWK_PWM_PIN5)
-//SQUAWK_CONSTRUCT_ISR(SQUAWK_PWM_PIN11)
+SQUAWK_CONSTRUCT_ISR(SQUAWK_PWM_PIN11)
 
 // Initialize Squawk
 void setup() {
