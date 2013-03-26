@@ -18,17 +18,17 @@ Leonardo
   use SQUAWK_PWM_PIN5 (it's on Timer3)
   
 Uno, Due(milanove), Diecimila, Nano, Mini or LilyPad
-  use SQUAWK_PWM_PIN11
-  or  SQUAWK_PWM_PIN3 (both are on Timer2)
+  only use SQUAWK_PWM_PIN3 (it's on Timer2)
+  because SQUAWK_PWM_PIN11 is used for SD card access
   
 Others
   not yet supported, you'll have to try and see what happens ;)
 */
 
 // Configure Squawk for PWM output, and construct suitable ISR.
-//SQUAWK_CONSTRUCT_ISR(SQUAWK_PWM_PIN3)
+SQUAWK_CONSTRUCT_ISR(SQUAWK_PWM_PIN3)
 //SQUAWK_CONSTRUCT_ISR(SQUAWK_PWM_PIN5)
-SQUAWK_CONSTRUCT_ISR(SQUAWK_PWM_PIN11)
+//SQUAWK_CONSTRUCT_ISR(SQUAWK_PWM_PIN11)
 
 // Chip select pin for SD card (it's 4 on the ethernet shield)
 const int chipSelect = 10;
