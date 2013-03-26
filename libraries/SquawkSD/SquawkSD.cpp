@@ -11,10 +11,10 @@ class StreamFile : public SquawkStream {
     virtual void seek(size_t offset) { f.seek(offset); }
 };
 
-static StreamFile sd;
+static StreamFile file;
 
-void SquawkSynthSD::play(File file) {
+void SquawkSynthSD::play(File melody) {
 	SquawkSynth::pause();
-	sd = StreamFile(file);
-	SquawkSynth::play(&sd);
+	file = StreamFile(melody);
+	SquawkSynth::play(&file);
 }

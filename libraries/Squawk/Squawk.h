@@ -60,7 +60,9 @@ typedef struct {
   uint8_t  vol;
   uint16_t freq;
   uint16_t phase;
-} Oscillator;
+} osc_t;
+
+typedef osc_t Oscillator;
 
 // oscillator memory
 extern Oscillator osc[4];
@@ -109,7 +111,7 @@ extern Oscillator osc[4];
 #define SQUAWK_RLD_PORTC PORTC
 */
 
-// SAMPLE CRUNCHER
+// SAMPLE GRINDER
 // generates samples and updates oscillators
 // uses 130 cycles (not counting playroutine)
 //     ~1/3 CPU @ 44kHz on 16MHz
