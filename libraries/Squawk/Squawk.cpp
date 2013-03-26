@@ -92,11 +92,9 @@ static const uint16_t period_tbl[84] PROGMEM = {
 };
 
 // ProTracker sine table
-static const int8_t sine[64] PROGMEM = {
+static const int8_t sine[32] PROGMEM = {
   0x00, 0x0C, 0x18, 0x25, 0x30, 0x3C, 0x47, 0x51, 0x5A, 0x62, 0x6A, 0x70, 0x76, 0x7A, 0x7D, 0x7F,
   0x7F, 0x7F, 0x7D, 0x7A, 0x76, 0x70, 0x6A, 0x62, 0x5A, 0x51, 0x47, 0x3C, 0x30, 0x25, 0x18, 0x0C,
-  0x00, 0xF3, 0xE7, 0xDA, 0xCF, 0xC3, 0xB8, 0xAE, 0xA5, 0x9D, 0x95, 0x8F, 0x89, 0x85, 0x82, 0x80,
-  0x80, 0x80, 0x82, 0x85, 0x89, 0x8F, 0x95, 0x9D, 0xA5, 0xAE, 0xB8, 0xC3, 0xCF, 0xDA, 0xE7, 0xF3,
 };
 
 // Squawk object
@@ -108,22 +106,22 @@ static int8_t do_osc(osc_t *p_osc) {
   int16_t mul;
   switch(p_osc->mode & 0x03) {
     case 0: // Sine
-      sample = pgm_read_byte(&sine[(p_osc->offset) & 0x3F]);
-      if(sample > 127) sample -= 256;
+      sample = pgm_read_byte(&sine[(p_osc->offset) & 0x1F]);
+      if(p_osc->offset & 0x20) sample = -sample;
       break;
     case 1: // Square
       sample = (p_osc->offset & 0x20) ? 127 : -128;
       break;
     case 2: // Saw
-      sample = ((p_osc->offset << 2) & 0xFF) - 128;
+      sample = 127 - (p_osc->offset << 2);
       break;
     case 3: // Noise (random)
-      sample = rand() & 0xFF;
+      sample = rand();
       break;
   }
   mul = sample * LO4(p_osc->fxp);
   //Serial.write(p_osc->offset);
-  p_osc->offset = (p_osc->offset + HI4(p_osc->fxp)) & 0xFF;
+  p_osc->offset = (p_osc->offset + HI4(p_osc->fxp));
   return mul >> 6;
 }
 
