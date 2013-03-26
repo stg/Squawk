@@ -10,7 +10,6 @@ Arduino internals behave. Uncomment the correct line below, depending on
 which Arduino you intend to run the code on.
 
 Note: You CAN use any pin, if you do not rely on Timer0 related things.
-      This sketch uses delay() so we need to steer clear of Timer0.
 
 Leonardo
   use SQUAWK_PWM_PIN5 (it's on Timer3)
