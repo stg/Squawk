@@ -14,32 +14,6 @@
 #define Melody const uint8_t PROGMEM
 
 extern void squawk_playroutine() asm("squawk_playroutine");
-/*
-class ProgramMemoryFile : public File {
-  private:
-    uint8_t *p_start;
-    uint8_t *p_end;
-    uint8_t *p_cursor;
-
-  public:
-    ProgramMemoryFile(const uint8_t *p_rom, size_t rom_size);
-    virtual size_t write(uint8_t);
-    virtual int read();
-    virtual int peek();
-    virtual int available();
-    virtual void flush();
-    boolean seek(uint32_t pos);
-    uint32_t position();
-    uint32_t size();
-    void close();
-    char * name();
-    boolean isDirectory(void);
-    File openNextFile(uint8_t mode = O_RDONLY);
-    void rewindDirectory(void);
-    using Print::write;
-    
-};
-*/
 
 class SquawkStream {
 	public:
