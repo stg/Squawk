@@ -23,9 +23,9 @@ Others
 */
 
 // Configure Squawk for PWM output, and construct suitable ISR.
-//SQUAWK_CONSTRUCT_ISR(SQUAWK_PWM_PIN3)
+SQUAWK_CONSTRUCT_ISR(SQUAWK_PWM_PIN3)
 //SQUAWK_CONSTRUCT_ISR(SQUAWK_PWM_PIN5)
-SQUAWK_CONSTRUCT_ISR(SQUAWK_PWM_PIN11)
+//SQUAWK_CONSTRUCT_ISR(SQUAWK_PWM_PIN11)
 
 // Declare type of TheOriginalSquawk, so we can put it AFTER the code.
 // Using this declaration, you could also put the code in a separate .cpp
@@ -40,7 +40,7 @@ void setup() {
   // Begin playback of melody.
   Squawk.play(TheOriginalSquawk);
   // Tune the song to something more suitable for a piezo
-  Squawk.tune(1.6);
+  Squawk.tune(2.0);
   // Lower the tempo ever so slightly
   Squawk.tempo(48);
 }

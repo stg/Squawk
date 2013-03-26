@@ -121,13 +121,13 @@ uint16_t cia, cia_count; \
 intptr_t squawk_register = (intptr_t)&TARGET_REGISTER; \
 ISR(TIMER1_COMPA_vect, ISR_NAKED) { \
   asm volatile( \
+    "push r2                                          " "\n\t" \
+    "in   r2,                    __SREG__             " "\n\t" \
     "push r18                                         " "\n\t" \
     "push r27                                         " "\n\t" \
     "push r26                                         " "\n\t" \
     "push r0                                          " "\n\t" \
     "push r1                                          " "\n\t" \
-    "push r2                                          " "\n\t" \
-    "in   r2,                    __SREG__             " "\n\t" \
 \
     "lds  r18,                   osc+2*%[mul]+%[fre]  " "\n\t" \
     "lds  r0,                    osc+2*%[mul]+%[pha]  " "\n\t" \
@@ -143,7 +143,7 @@ ISR(TIMER1_COMPA_vect, ISR_NAKED) { \
     "com  r27                                         " "\n\t" \
     "lsl  r27                                         " "\n\t" \
     "lds  r26,                   osc+2*%[mul]+%[vol]  " "\n\t" \
-    "subi r27,                   128                   " "\n\t" \
+    "subi r27,                   128                  " "\n\t" \
     "muls r27,                   r26                  " "\n\t" \
     "lsl  r1                                          " "\n\t" \
     "mov  r26,                   r1                   " "\n\t" \
@@ -206,13 +206,13 @@ ISR(TIMER1_COMPA_vect, ISR_NAKED) { \
 	  "breq call_playroutine                            " "\n\t" \
 	  "sts  cia_count+1,           r27                  " "\n\t" \
 	  "sts  cia_count,             r26                  " "\n\t" \
-    "out  __SREG__,              r2                   " "\n\t" \
-    "pop  r2                                          " "\n\t" \
     "pop  r1                                          " "\n\t" \
     "pop  r0                                          " "\n\t" \
     "pop  r26                                         " "\n\t" \
     "pop  r27                                         " "\n\t" \
     "pop  r18                                         " "\n\t" \
+    "out  __SREG__,              r2                   " "\n\t" \
+    "pop  r2                                          " "\n\t" \
 	  "reti                                             " "\n\t" \
     "call_playroutine:                                " "\n\t" \
 \
@@ -245,13 +245,13 @@ ISR(TIMER1_COMPA_vect, ISR_NAKED) { \
 	  "pop  r20                                         " "\n\t" \
 	  "pop  r19                                         " "\n\t" \
 \
-    "out  __SREG__,              r2                   " "\n\t" \
-    "pop  r2                                          " "\n\t" \
     "pop  r1                                          " "\n\t" \
     "pop  r0                                          " "\n\t" \
     "pop  r26                                         " "\n\t" \
     "pop  r27                                         " "\n\t" \
     "pop  r18                                         " "\n\t" \
+    "out  __SREG__,              r2                   " "\n\t" \
+    "pop  r2                                          " "\n\t" \
 	  "reti                                             " "\n\t" \
     : \
     : [reg] "M" _SFR_MEM_ADDR(TARGET_REGISTER), \

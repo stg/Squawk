@@ -57,6 +57,8 @@ static uint8_t  speed;
 static uint8_t  tick;
 static uint8_t  ix_row;
 static uint8_t  ix_order;
+static uint8_t  ix_nextrow;
+static uint8_t  ix_nextorder;
 static uint8_t  row_delay;
 static fxm_t    fxm[4];
 static cel_t    cel[4];
@@ -306,11 +308,13 @@ static void decrunch_row() {
 // Resets playback
 static void playroutine_reset() {
   memset(fxm, 0, sizeof(fxm));
-  tick      = 0;
-  ix_row    = 0;
-  ix_order  = 0;
-  row_delay = 0;
-  speed     = 6;
+  tick         = 0;
+  ix_row       = 0;
+  ix_order     = 0;
+  ix_nextrow   = 0xFF;
+  ix_nextorder = 0xFF;
+  row_delay    = 0;
+  speed        = 6;
   decrunch_row();
 }
 
@@ -351,7 +355,6 @@ void SquawkSynth::stop() {
 // Progress module by one tick
 void squawk_playroutine() {
   static bool lockout = false;
-  bool decrunch = false;
 
   if(!order[0]) return;
 
@@ -422,18 +425,17 @@ void squawk_playroutine() {
             if(fxp) p_fxm->port_speed = fxp;
             break;
           case 0xB0: // Jump to pattern
-            ix_order = (fxp >= order[0] ? 0x00 : fxp);
-            ix_row = 0;
+            ix_nextorder = (fxp >= order[0] ? 0x00 : fxp);
+            ix_nextrow = 0;
             pattern_jump = true;
-            decrunch = true;
             break;
           case 0xC0: // Set volume
             p_osc->vol = p_fxm->volume = MIN(fxp, 0x1F);
             break;
           case 0xD0: // Jump to row
-            if(!pattern_jump) ix_order = ((ix_order + 1) >= order[0] ? 0x00 : ix_order + 1);
+            if(!pattern_jump) ix_nextorder = ((ix_order + 1) >= order[0] ? 0x00 : ix_order + 1);
             pattern_jump = true;
-            ix_row = (fxp > 63 ? 0 : fxp);
+            ix_nextrow = (fxp > 63 ? 0 : fxp);
             break;
           case 0xF0: // Set speed, BPM(CIA) not supported
             if(fxp <= 0x20) speed = fxp;
@@ -558,9 +560,17 @@ void squawk_playroutine() {
       if(++ix_row == 64) {
         ix_row = 0;
         if(++ix_order >= order[0]) ix_order = 0;
-        decrunch = true;
       }
-      if(decrunch) decrunch_row();
+	    // Forced order/row
+	    if( ix_nextorder != 0xFF ) {
+	      ix_order = ix_nextorder;
+	      ix_nextorder = 0xFF;
+	    }
+	    if( ix_nextrow != 0xFF ) {
+	      ix_row = ix_nextrow;
+	      ix_nextrow = 0xFF;
+	    }
+			decrunch_row();
     }
 
   }
