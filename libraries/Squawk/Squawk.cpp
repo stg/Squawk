@@ -74,6 +74,7 @@ extern uint16_t cia;
 
 // Exports
 osc_t osc[4];
+uint8_t pcm = 128;
 
 // ProTracker period tables
 static const uint16_t period_tbl[84] PROGMEM = {

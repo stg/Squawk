@@ -23,6 +23,7 @@ tempo	KEYWORD2
 
 Squawk	KEYWORD2
 osc	KEYWORD2
+pcm	KEYWORD2
 
 #######################################
 # Constants (LITERAL1)

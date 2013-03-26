@@ -65,7 +65,8 @@ typedef struct {
 typedef osc_t Oscillator;
 
 // oscillator memory
-extern Oscillator osc[4];
+extern osc_t osc[4];
+extern uint8_t pcm;
 // channel 0 is pulse wave @ 25% duty
 // channel 1 is square wave
 // channel 2 is triangle wave
@@ -113,7 +114,7 @@ extern Oscillator osc[4];
 
 // SAMPLE GRINDER
 // generates samples and updates oscillators
-// uses 130 cycles (not counting playroutine)
+// uses 132 cycles (not counting playroutine)
 //     ~1/3 CPU @ 44kHz on 16MHz
 #define SQUAWK_CONSTRUCT_ISR(TARGET_REGISTER) \
 uint16_t cia, cia_count; \
@@ -195,7 +196,8 @@ ISR(TIMER1_COMPA_vect, ISR_NAKED) { \
     "neg  r27                                         " "\n\t" \
     "add  r26,                   r27                  " "\n\t" \
 \
-    "subi r26,                   128                  " "\n\t" \
+    "lds  r27,                   pcm                  " "\n\t" \
+    "add  r26,                   r27                  " "\n\t" \
     "sts  %[reg],                r26                  " "\n\t" \
 \
 	  "lds  r27,                   cia_count+1          " "\n\t" \
