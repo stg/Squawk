@@ -8,18 +8,16 @@
 #include <stddef.h>
 #include <inttypes.h>
 #include "Arduino.h"
-/*
-#include <SD.h>
-*/
-#define Melody const uint8_t PROGMEM
 
-extern void squawk_playroutine() asm("squawk_playroutine");
+#define Melody const uint8_t PROGMEM
 
 class SquawkStream {
 	public:
-    virtual uint8_t read() { return 0; };
-    virtual void seek(size_t offset) {};
+	  virtual ~SquawkStream() = 0;
+    virtual uint8_t read() = 0;
+    virtual void seek(size_t offset) = 0;
 };
+inline SquawkStream::~SquawkStream() { }
 
 class SquawkSynth {
 
@@ -111,6 +109,8 @@ extern uint8_t pcm;
 #define SQUAWK_RLD_PORTB PORTB
 #define SQUAWK_RLD_PORTC PORTC
 */
+
+extern void squawk_playroutine() asm("squawk_playroutine");
 
 // SAMPLE GRINDER
 // generates samples and updates oscillators
