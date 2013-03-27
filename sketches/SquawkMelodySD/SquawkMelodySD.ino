@@ -34,19 +34,21 @@ const int chipSelect = 4;
 
 // Initialize Squawk
 void setup() {
+  File melody;
   // The default SD card chip select pin must be output
-  pinMode(10, OUTPUT);
+  pinMode(SS, OUTPUT);
   // Set up Squawk to generate samples at 32kHz.
   // Squawk always steals Timer1 for sample crunching.
   SquawkSD.begin(32000);
   // Initialize the SD card  
   if (SD.begin(chipSelect)) {
     // Open a file on the SD card
-    File melody = SD.open("melody.sqm");
+    melody = SD.open("melody.sqm");
     // Begin playback of file
-    SquawkSD.play(melody);
-  } else {
-    // SD card did not initialize, play some noise
+    if(melody) SquawkSD.play(melody);
+  }
+  // If something went wrong, play some noise
+  if(!melody) {
     osc[3].vol = 0x0F;
     SquawkSD.play();
   }

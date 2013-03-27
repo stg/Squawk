@@ -111,14 +111,13 @@ static int8_t do_osc(pto_t *p_osc) {
       sample = (p_osc->offset & 0x20) ? 127 : -128;
       break;
     case 2: // Saw
-      sample = 127 - (p_osc->offset << 2);
+      sample = -(p_osc->offset << 2);
       break;
     case 3: // Noise (random)
       sample = rand();
       break;
   }
   mul = sample * LO4(p_osc->fxp);
-  //Serial.write(p_osc->offset);
   p_osc->offset = (p_osc->offset + HI4(p_osc->fxp));
   return mul >> 6;
 }
@@ -415,6 +414,7 @@ void squawk_playroutine() {
 
             // Start note
             if(ch != 3) p_osc->freq = FREQ(p_fxm->period);
+
           }
         }
 
@@ -492,6 +492,8 @@ void squawk_playroutine() {
               p_osc->freq = FREQ(p_fxm->period);
             }
             break;
+/*
+          // Just feels... ugly
           case 0xE9: // Retrigger note
             temp = tick; while(temp >= fxp) temp -= fxp;
             if(!temp) {
@@ -502,6 +504,7 @@ void squawk_playroutine() {
               }
             }
             break;
+*/            
           case 0xEC: // Note cut
             if(fxp == tick) p_osc->vol = 0x00;
             break;
