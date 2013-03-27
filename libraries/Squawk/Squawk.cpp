@@ -52,6 +52,7 @@ typedef struct {
 } fxm_t;
 
 // Locals
+static uint8_t  order_count;
 static uint8_t  order[32];
 static uint8_t  speed;
 static uint8_t  tick;
@@ -68,6 +69,7 @@ static float    tuning = 1.0;
 static uint16_t tick_rate = 50;
 
 static SquawkStream *stream;
+static uint16_t stream_base;
 static StreamROM rom;
 
 // Imports
@@ -250,7 +252,7 @@ static void decrunch_row() {
   uint8_t data;
 
   // Initial decrunch
-  stream->seek(32 + ((order[1 + ix_order] << 6) + ix_row) * 9);
+  stream->seek(stream_base + ((order[ix_order] << 6) + ix_row) * 9);
   data = stream->read(); cel[0].fxc  =  data << 0x04;
                          cel[1].fxc  =  data &  0xF0;
   data = stream->read(); cel[0].fxp  =  data;
@@ -327,9 +329,27 @@ void SquawkSynth::play(SquawkStream *melody) {
   pause();
   stream = melody;
   stream->seek(0);
-  for(n = 0; n < 32; n++) order[n] = stream->read();
-  playroutine_reset();
-  play();
+  n = stream->read();
+  if(n == 'S') {
+    // Squawk SD file
+    stream->seek(4);
+    stream_base = stream->read() << 8;
+    stream_base |= stream->read();
+    stream_base += 6;
+  } else {
+    // Squawk ROM array
+    stream_base = 1;
+  }
+  stream->seek(stream_base);
+  order_count = stream->read();
+  if(order_count <= 40) {
+    stream_base += order_count + 1;    
+    for(n = 0; n < order_count; n++) order[n] = stream->read();
+    playroutine_reset();
+    play();
+  } else {
+    order_count = 0;
+  }
 }
 
 // Load a melody in PROGMEM and start grinding samples
@@ -347,14 +367,14 @@ void SquawkSynth::pause() {
 // Stop playing, unload melody
 void SquawkSynth::stop() {
   pause();
-  order[0] = 0; // Unload melody
+  order_count = 0; // Unload melody
 }
 
 // Progress module by one tick
 void squawk_playroutine() {
   static bool lockout = false;
 
-  if(!order[0]) return;
+  if(!order_count) return;
 
   // Protect from re-entry via ISR
   cli();
@@ -424,7 +444,7 @@ void squawk_playroutine() {
             if(fxp) p_fxm->port_speed = fxp;
             break;
           case 0xB0: // Jump to pattern
-            ix_nextorder = (fxp >= order[0] ? 0x00 : fxp);
+            ix_nextorder = (fxp >= order_count ? 0x00 : fxp);
             ix_nextrow = 0;
             pattern_jump = true;
             break;
@@ -432,7 +452,7 @@ void squawk_playroutine() {
             p_osc->vol = p_fxm->volume = MIN(fxp, 0x1F);
             break;
           case 0xD0: // Jump to row
-            if(!pattern_jump) ix_nextorder = ((ix_order + 1) >= order[0] ? 0x00 : ix_order + 1);
+            if(!pattern_jump) ix_nextorder = ((ix_order + 1) >= order_count ? 0x00 : ix_order + 1);
             pattern_jump = true;
             ix_nextrow = (fxp > 63 ? 0 : fxp);
             break;
@@ -561,7 +581,7 @@ void squawk_playroutine() {
     if(tick == 0) {
       if(++ix_row == 64) {
         ix_row = 0;
-        if(++ix_order >= order[0]) ix_order = 0;
+        if(++ix_order >= order_count) ix_order = 0;
       }
 	    // Forced order/row
 	    if( ix_nextorder != 0xFF ) {

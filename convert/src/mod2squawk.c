@@ -63,7 +63,7 @@ static const uint16_t period_tbl[84] = {
 
 void alert(char *str, int argc) {
 #ifdef WIN32
-  if(argc != 3) {
+  if(argc != 4) {
     MessageBox(NULL, str, "Squawk Converter", MB_OK); 
     return;
   }
@@ -74,7 +74,7 @@ void alert(char *str, int argc) {
 bool confirm(char *str, int argc) {
   char resp;
 #ifdef WIN32
-  if(argc != 3) {
+  if(argc != 4) {
     return MessageBox(NULL, str, "Squawk Converter", MB_YESNO) == IDYES;
   }
 #endif
@@ -86,26 +86,50 @@ bool confirm(char *str, int argc) {
   return resp == 'Y';
 }
 
+static void print_use(char**argv) {
+  printf("Usage:\n\t%s -? [input].mod [output].c\n", argv[0]);
+  printf("-? is either -f for SD card file or -a for a Melody array\n");
+  printf("Example\n\t%s -f melody.mod melody.sqm\n", argv[0]);
+}
+
 int main(int argc,char**argv) {
   uint8_t *data = NULL;
   FILE *f;
   protracker_head_t *head;
   size_t filesize;
   char name[24];
-  unsigned int n;
+  unsigned int n, mode = 0;
   uint8_t patterns = 0;
   
 #ifndef WIN32
   // Check parameter count
-  if(argc != 3) {
-    printf("Usage:\n\t%s [input].mod [output].c\n", argv[0]);
+  if(argc != 4) {
+    print_use(argv);
     return 1;
   }
 #endif
 
   if(argc > 1) {
+    if(strlen(argv[1]) > 1) {
+      if(argv[1][0] == '-') {
+        if(argv[1][1] == 'f' || argv[1][1] == 'F') {
+          mode = 1;
+        } else if(argv[1][1] == 'a' || argv[1][1] == 'A') {
+          mode = 2;
+        }
+      }
+    }
+#ifndef WIN32
+    if(mode == 0) {
+      print_use(argv);
+      return 1;
+    }
+#endif
+  }
+
+  if(argc > 2) {
     // Open file
-    data = blob(argv[1], &filesize);
+    data = blob(argv[2], &filesize);
 #ifdef WIN32
   } else {
     char szFileName[MAX_PATH];
@@ -175,8 +199,8 @@ int main(int argc,char**argv) {
   }
 
   // Time to start writing output
-  if(argc > 2) {
-    f = fopen(argv[2], "wb");
+  if(argc > 3) {
+    f = fopen(argv[3], "wb");
 #ifdef WIN32
   } else {
     char szFileName[MAX_PATH];
@@ -188,14 +212,25 @@ int main(int argc,char**argv) {
     ofn.lpstrFile = szFileName; 
     ofn.nMaxFile = sizeof(szFileName); 
     ofn.hInstance = NULL; 
-    ofn.lpstrFilter = TEXT("Squawk c-array (*.txt)\0*.txt\0All Files (*.*)\0*.*\0\0");
-    ofn.lpstrDefExt = "txt";
+    ofn.lpstrFilter = TEXT("Squawk module (*.sqm)\0*.sqm\0Squawk c-array (*.txt, *.c, *.cpp)\0*.txt;*.c;*.cpp\0All Files (*.*)\0*.*\0\0");
+    ofn.lpstrDefExt = "sqm";
     ofn.nFilterIndex = 1;  
     ofn.Flags= OFN_OVERWRITEPROMPT | OFN_NOREADONLYRETURN;
     int bRes; 
     if(GetSaveFileName(&ofn) == 0) return 1;
     // Open file
     f = fopen(szFileName, "wb");
+
+    if(mode == 0) {
+      mode = 1;
+      char *p_ext = strrchr(szFileName, '.');
+      if(p_ext) {
+        if(!(strcmp(p_ext, ".h") && strcmp(p_ext, ".c") && strcmp(p_ext, ".cpp") && strcmp(p_ext, ".txt"))) {
+          mode = 2;
+        }
+      }
+    }
+
 #endif
   }
   if(!f) {
@@ -209,18 +244,28 @@ int main(int argc,char**argv) {
 
   uint8_t fxc[4], fxp[4], note[4], sample[4];
   uint16_t period;
-  uint8_t temp;
+  uint8_t temp, hout;
   
   static unsigned int cols = 0;
+
+#define HOUT(C) if(mode == 2 ) { if(!cols) fprintf(f, "\n "); fprintf(f, " 0x%02X,", C); if(++cols == 16) cols = 0; } else { hout = (C); fwrite(&hout, 1, 1, f); }
+
+  if(mode == 2) {
+    // Squawk melody
+    fprintf(f, "Melody InsertTitleHere[] = {");
+    HOUT( 'A' );
+  } else {
+    HOUT( 'S' ); // ID
+    HOUT( 'Q' );
+    HOUT( 'M' );
+    HOUT( '1' );
+    HOUT( 0 ); // Size of meta data
+    HOUT( 0 );
+  }
   
-  // Squawk melody
-  fprintf(f, "Melody InsertTitleHere[] = {");
-  
-  #define HOUT(C) if(!cols) fprintf(f, "\n "); fprintf(f, " 0x%02X,", C); if(++cols == 16) cols = 0;
-    
-  // Write order list, 32 bytes
+  // Write order list
   HOUT( head->order_count );
-  for(n = 0; n < 31; n++) {
+  for(n = 0; n < head->order_count; n++) {
     HOUT( head->order[n] );
   }
 
@@ -380,14 +425,16 @@ int main(int argc,char**argv) {
       HOUT( note[2] | (sample[2] == 0 ? 0x00 : 0x80) );
     }
   }
-  // Squawk melody end
-  fprintf(f, "\n};\n"); 
+  if(mode == 2) {
+    // Squawk melody end
+    fprintf(f, "\n};\n"); 
+  }
 
   fclose(f);
   free(data);
 
 #ifdef WIN32
-  if(argc != 3) {
+  if(argc != 4) {
     printf("Conversion successful!\n");
     printf("Press any key to quit");
     getch();

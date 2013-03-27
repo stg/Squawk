@@ -109,7 +109,8 @@ int main(int argc,char**argv) {
     ofn.lpstrFile = szFileName; 
     ofn.nMaxFile = sizeof(szFileName); 
     ofn.hInstance = NULL; 
-    ofn.lpstrFilter = TEXT("Squawk c-array (*.txt)\0*.txt\0All Files (*.*)\0*.*\0\0");
+    ofn.lpstrFilter = TEXT("Squawk module (*.sqm)\0*.sqm\0Squawk c-array (*.txt, *.c, *.cpp)\0*.txt;*.c;*.cpp\0All Files (*.*)\0*.*\0\0");
+
     ofn.nFilterIndex = 1;  
     ofn.Flags= OFN_FILEMUSTEXIST;
     int bRes; 
@@ -123,45 +124,75 @@ int main(int argc,char**argv) {
     return 1;
   }
 
-  // Nasty count c-array content count
-  size_t arrcount = 0;
-  p_data = data;
-  while(p_data < &data[filesize - 4]) {
-    if(*p_data == '0' && *(p_data + 1) == 'x') arrcount++;
-    p_data++;
-  }
+  unsigned int mode = 2;
+  
+  if(data[0] == 'S' &&
+     data[1] == 'Q' &&
+     data[2] == 'M' &&
+     data[3] == '1') mode = 1;
 
-  // Check file size
-  if(arrcount < 608) {
-      alert("Input file is too small\n", argc);
-      free(data);
-      return 1;
-  } else if(((unsigned int)((arrcount - 32) / 9)) * 9 != arrcount - 32) {
-      alert("Input file has incorrect size\n", argc);
-      free(data);
-      return 1;
-  }
+  size_t datacount = 0;
 
-  // Memory for data
-  uint8_t *tempdata = malloc(arrcount);
-  if(!tempdata) {
-    alert("Out of memory\n", argc);
-    free(data);
-    return 1;
-  }
-
-  // Convert c-array to blob
-  p_data = data;
-  p_out = tempdata;
-  while(p_data < &data[filesize - 4]) {
-    if(*p_data == '0' && *(p_data + 1) == 'x') {
-      *(p_data+4) = 0;
-      *p_out++ = strtoul(p_data + 2, NULL, 16);
+  if(mode == 1) {
+    datacount = filesize;
+    // Check file size
+    if(datacount < 582) {
+        alert("Input file is too small\n", argc);
+        free(data);
+        return 1;
+    } else if(((datacount - ((data[4] << 8) + data[5] + data[6])) % 576) != 7) {
+        alert("Input file has incorrect size\n", argc);
+        free(data);
+        return 1;
     }
-    p_data++;
+
+  } else {
+    // Count c-array content count
+    p_data = data;
+    while(p_data < &data[filesize - 4]) {
+      if(*p_data == '0' && *(p_data + 1) == 'x') datacount++;
+      p_data++;
+    }
+
+    // Memory for data
+    uint8_t *tempdata = malloc(datacount);
+    if(!tempdata) {
+      alert("Out of memory\n", argc);
+      free(data);
+      return 1;
+    }
+  
+    // Convert c-array to blob
+    p_data = data;
+    p_out = tempdata;
+    while(p_data < &data[filesize - 4]) {
+      if(*p_data == '0' && *(p_data + 1) == 'x') {
+        *(p_data+4) = 0;
+        *p_out++ = strtoul(p_data + 2, NULL, 16);
+      }
+      p_data++;
+    }
+    free(data);
+    data = tempdata;
+
+    // Check file size
+    if(datacount < 579) {
+        alert("Input file is too small\n", argc);
+        free(data);
+        return 1;
+    } else if(((datacount - (2 + data[1])) % 576) != 0) {
+        alert("Input file has incorrect size\n", argc);
+        free(data);
+        return 1;
+    }
+
+    
+    if(data[0] != 'A') {
+        alert("Array does not contain Squawk data\n", argc);
+        free(data);
+        return 1;
+    }
   }
-  free(data);
-  data = tempdata;
 
   // Create header
   memset(&head, 0, sizeof(protracker_head_t));
@@ -182,11 +213,16 @@ int main(int argc,char**argv) {
   head.sample[3].length_msb   = 0x40;
   head.sample[3].volume       = 0x3F;
   head.sample[3].loop_len_msb = 0x40;
-  for(n = 4; n < 32; n++) memset(head.sample[n].name, ' ', 22);
-  head.order_count = data[0];
+  for(n = 4; n < 31; n++) memset(head.sample[n].name, ' ', 22);
   head.historical  = 0x7F;
-  memcpy(head.order, &data[1], 31);
   memcpy(head.ident, "M.K.", 4);
+  if(mode == 2) {
+    head.order_count = data[1];
+    memcpy(head.order, &data[2], head.order_count);
+  } else {
+    head.order_count = data[(data[4] << 8) + data[5] + 6];
+    memcpy(head.order, &data[(data[4] << 8) + data[5] + 7], head.order_count);
+  }
 
   // Time to start writing output
   if(argc > 2) {
@@ -222,8 +258,14 @@ int main(int argc,char**argv) {
   fwrite(&head, 1, sizeof(protracker_head_t), f);
 
   // Write patterns
-  p_data = (data + 32);
-  for(n = 0; n < ((arrcount - 32) / 9); n++) {
+  if(mode == 2) {
+    p_data = &data[head.order_count + 2];
+  } else {
+    p_data = &data[(data[4] << 8) + data[5] + 7 + head.order_count];
+  }
+  
+  datacount = ((datacount - (p_data - data)) / 9);
+  for(n = 0; n < datacount; n++) {
     uint8_t dbyte;
     cell_t cel[4];
 
