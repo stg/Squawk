@@ -7,6 +7,7 @@ class SquawkSynthSD : public SquawkSynth {
   private:
   	File f;
 	public:
+	  inline void play() { Squawk.play(); };
 		void play(File file);
 };
 

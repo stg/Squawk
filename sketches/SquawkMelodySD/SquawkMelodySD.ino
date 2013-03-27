@@ -30,7 +30,7 @@ SQUAWK_CONSTRUCT_ISR(SQUAWK_PWM_PIN3)
 //SQUAWK_CONSTRUCT_ISR(SQUAWK_PWM_PIN11)
 
 // Chip select pin for SD card (it's 4 on the ethernet shield)
-const int chipSelect = 10;
+const int chipSelect = 4;
 
 // Initialize Squawk
 void setup() {
@@ -48,6 +48,7 @@ void setup() {
   } else {
     // SD card did not initialize, play some noise
     osc[3].vol = 0x0F;
+    SquawkSD.play();
   }
 }
 

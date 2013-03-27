@@ -248,7 +248,6 @@ void SquawkSynth::begin(uint16_t hz) {
 
 // Decrunches a 9 byte row into a useful data
 static void decrunch_row() {
-  const uint8_t *p_data;
   uint8_t data;
 
   // Initial decrunch
