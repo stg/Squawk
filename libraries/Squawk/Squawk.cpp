@@ -23,8 +23,8 @@ class StreamROM : public SquawkStream {
     uint8_t *p_cursor;
   public:
     StreamROM(const uint8_t *p_rom = NULL) { p_start = p_cursor = (uint8_t*)p_rom; }
-    virtual uint8_t read() { return pgm_read_byte(p_cursor++); }
-    virtual void seek(size_t offset) { p_cursor = p_start + offset; }
+    uint8_t read() { return pgm_read_byte(p_cursor++); }
+    void seek(size_t offset) { p_cursor = p_start + offset; }
 };
 
 // Oscillator memory
