@@ -13,13 +13,13 @@ class StreamFile : public SquawkStream {
 
 static StreamFile file;
 
+extern uint16_t period_tbl[84] PROGMEM;
+
 void SquawkSynthSD::play(File melody) {
 	SquawkSynth::pause();
 	file = StreamFile(melody);
 	SquawkSynth::play(&file);
 }
-
-extern uint16_t period_tbl[84] PROGMEM;
 
 void SquawkSynthSD::convert(File in, File out) {
   unsigned int n;

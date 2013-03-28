@@ -16,18 +16,22 @@ STEP 1
 Track your music using the template .mod file, in any ProTracker
 compatible tracker software such as OpenMPT, MilkyTracker, etc.
 
-When tracking, follow a few simple rules:
+When tracking for Squawk, follow a few additional rules:
 
 1) Only use instrument 1 in channel 1, 2 in ch. 2, and so on.
 2) Only use even numbers for parameters on volume related commands
 3) Don't use advanced looping (regular jumps/breaks are ok)
 4) Don't try to set tempo (speed is ok)
-5) Put no more than 31 patterns in your order list
+5) Put no more than 40 patterns in your order list
 
 
 STEP 2
 
 After tracking, convert your .mod file using the supplied converter.
+
+There is also an Arduino based converter that performs the
+conversion directly on an SD card, but without providing
+any form of error checking.
 
 
 STEP 3
