@@ -14,7 +14,7 @@
 #define HI4(V)    (((V) & 0xF0) >> 4)
 #define MIN(A, B) ((A) < (B) ? (A) : (B))
 #define MAX(A, B) ((A) > (B) ? (A) : (B))
-#define FREQ(PERIOD) (ch == 2 ? (tuning_long / PERIOD) >> 2 : (tuning_long / PERIOD))
+#define FREQ(PERIOD) (tuning_long / (PERIOD))
 
 // SquawkStream class for PROGMEM data
 class StreamROM : public SquawkStream {
