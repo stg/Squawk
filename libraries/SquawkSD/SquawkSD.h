@@ -9,6 +9,7 @@ class SquawkSynthSD : public SquawkSynth {
 	public:
 	  inline void play() { Squawk.play(); };
 		void play(File file);
+		void convert(File in, File out);
 };
 
 extern SquawkSynthSD SquawkSD;
