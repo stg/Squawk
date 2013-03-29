@@ -53,7 +53,7 @@ typedef struct {
 
 // Locals
 static uint8_t  order_count;
-static uint8_t  order[40];
+static uint8_t  order[64];
 static uint8_t  speed;
 static uint8_t  tick;
 static uint8_t  ix_row;
@@ -342,7 +342,7 @@ void SquawkSynth::play(SquawkStream *melody) {
   }
   stream->seek(stream_base);
   order_count = stream->read();
-  if(order_count <= 40) {
+  if(order_count <= 64) {
     stream_base += order_count + 1;
     for(n = 0; n < order_count; n++) order[n] = stream->read();
     playroutine_reset();

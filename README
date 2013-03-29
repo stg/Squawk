@@ -22,7 +22,7 @@ When tracking for Squawk, follow a few additional rules:
 2) Only use even numbers for parameters on volume related commands
 3) Don't use advanced looping (regular jumps/breaks are ok)
 4) Don't try to set tempo (speed is ok)
-5) Put no more than 40 patterns in your order list
+5) Put no more than 64 patterns in your order list
 
 
 STEP 2

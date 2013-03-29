@@ -185,7 +185,7 @@ int main(int argc,char**argv) {
   printf("Order count: %i\n", head->order_count);
 
   // Validate pattern count
-  if(patterns > 31 || head->order_count > 31) {
+  if(patterns > 64 || head->order_count > 64) {
     alert("Pattern or order count exceed maximum\n", argc);
     free(data);
     return 1;
