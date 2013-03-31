@@ -414,7 +414,7 @@ void squawk_playroutine() {
       if(tick == (fx == 0xED ? fxp : 0)) {
 
         // Reset volume
-        if(ix_period & 0x80) p_osc->vol = p_fxm->volume = 0x1F;
+        if(ix_period & 0x80) p_osc->vol = p_fxm->volume = 0x20;
 
         if((ix_period & 0x7F) != 0x7F) {
 
@@ -449,7 +449,7 @@ void squawk_playroutine() {
             pattern_jump = true;
             break;
           case 0xC0: // Set volume
-            p_osc->vol = p_fxm->volume = MIN(fxp, 0x1F);
+            p_osc->vol = p_fxm->volume = MIN(fxp, 0x20);
             break;
           case 0xD0: // Jump to row
             if(!pattern_jump) ix_nextorder = ((ix_order + 1) >= order_count ? 0x00 : ix_order + 1);
@@ -487,7 +487,7 @@ void squawk_playroutine() {
             p_fxm->trem.mode = fxp;
             break;
           case 0xEA: // Fine volume slide up
-            p_osc->vol = p_fxm->volume = MIN(p_fxm->volume + fxp, 0x1F);
+            p_osc->vol = p_fxm->volume = MIN(p_fxm->volume + fxp, 0x20);
             break;
           case 0xEB: // Fine volume slide down
             p_osc->vol = p_fxm->volume = MAX(p_fxm->volume - fxp, 0);
@@ -542,7 +542,7 @@ void squawk_playroutine() {
             if(fx == 0x50 || fx == 0x60 || fx == 0xA0) {
               if((fxp & 0xF0) == 0) p_fxm->volume -= (LO4(fxp));
               if((fxp & 0x0F) == 0) p_fxm->volume += (HI4(fxp));
-              p_osc->vol = p_fxm->volume = MAX(MIN(p_fxm->volume, 0x1F), 0);
+              p_osc->vol = p_fxm->volume = MAX(MIN(p_fxm->volume, 0x20), 0);
             }
         }
       }
@@ -567,7 +567,7 @@ void squawk_playroutine() {
         if(ch != 3) p_osc->freq = FREQ((p_fxm->period + do_osc(&p_fxm->vibr)));
       } else if(fx == 0x70) {
         int8_t trem = p_fxm->volume + do_osc(&p_fxm->trem);
-        p_osc->vol = MAX(MIN(trem, 0x1F), 0);
+        p_osc->vol = MAX(MIN(trem, 0x20), 0);
       }
 
       // Next channel

@@ -49,7 +49,7 @@ void setup() {
   }
   // If something went wrong, play some noise
   if(!melody) {
-    osc[3].vol = 0x0F;
+    osc[3].vol = 0x20;
     SquawkSD.play();
   }
 }
