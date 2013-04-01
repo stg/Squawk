@@ -109,11 +109,11 @@ static int8_t do_osc(pto_t *p_osc) {
       sample = pgm_read_byte(&sine_tbl[(p_osc->offset) & 0x1F]);
       if(p_osc->offset & 0x20) sample = -sample;
       break;
-    case 1: // Square
-      sample = (p_osc->offset & 0x20) ? 127 : -128;
-      break;
-    case 2: // Saw
+    case 1: // Saw
       sample = -(p_osc->offset << 2);
+      break;
+    case 2: // Square
+      sample = (p_osc->offset & 0x20) ? 127 : -128;
       break;
     case 3: // Noise (random)
       sample = rand();
