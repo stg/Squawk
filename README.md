@@ -71,7 +71,7 @@ If you have an SD card connected to your Arduino, you can also have the Arduino 
 Building the hardware
 ---------------------
 
-The simplest way of testing things out is to connect a piezo speaker between GND and the chosen output pin.  
+The simplest way of testing things out is to connect a piezo speaker between GND and the chosen output pin (default 3).  
 The `sketches/Squawk_player` sketch is tuned to frequencies suitable for a small boxed piezo speaker.
 
 It is also possible to connect output to a speaker system, but this requires a few additional components:
