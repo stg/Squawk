@@ -88,8 +88,9 @@ This is relatively close to audible frequencies (0-20kHz) which makes it difficu
 There is also some distortion due to interference between the sample rate and carrier frequency.
 
 Both of these problems can be alleviated by using an R-2R resistor ladder.  
-This is only supported on ATmega168 & ATmega328 devices.  
 See http://en.wikipedia.org/wiki/Resistor_ladder for more information.
+
+At this time, this is supported on ATmega168 & ATmega328 devices only.  
 
     AUDIO OUT __| |_________              2kΩ
                 | |    1kΩ  |___________/\/\/\__ PIN 7
@@ -109,3 +110,9 @@ This will give you a clean signal, with very crisp treble.
 
 To configure your Squawk sketch for this set-up, use the following line:
 `SQUAWK_CONSTRUCT_ISR(SQUAWK_RLD_PORTD)`
+
+Digital output from a microcontroller is usually not perfectly clean:
+* Glitches - differences in switching time between pins
+* Ringing - swings in output voltage following level transition
+
+Therefore it is not a bad idea to add low-pass filtering even when using a resistor ladder.
