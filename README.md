@@ -83,6 +83,8 @@ It is also possible to connect output to a speaker system, but this requires a f
 
 This is a first order ~8kHz low-pass filter to "smooth out" the PWM carrier frequency.
 
+### Using a resistor ladder
+
 The maximum PWM frequency for 8-bit output on a 16MHz Arduino is 62.5kHz.  
 This is relatively close to audible frequencies (0-20kHz) which makes it difficult to filter out.  
 There is also some distortion due to interference between the sample rate and carrier frequency.
@@ -108,7 +110,7 @@ At this time, this is supported on ATmega168 & ATmega328 devices only.
 
 This will give you a clean signal, with very crisp treble.
 
-To configure your Squawk sketch for this set-up, use the following line:
+To configure your Squawk sketch for this set-up, use the line  
 `SQUAWK_CONSTRUCT_ISR(SQUAWK_RLD_PORTD)`
 
 Digital output from a microcontroller is usually not perfectly clean:
