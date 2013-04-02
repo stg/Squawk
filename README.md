@@ -4,7 +4,8 @@
 Squawk is a **minimalistic 8-bit software synthesizer & playroutine** library for Arduino.
 
 The approach to generating sound is very simple - much akin to 80's game consoles.  
-It follows that Squawk sounds very much like an old-school 8-bit video game.
+It follows that Squawk sounds very much like an old-school 8-bit video game.  
+Sound demo: http://youtu.be/sFPqoVnI8sY
 
 Why? Because _simple_ is also _fast_.
 
