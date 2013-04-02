@@ -1,7 +1,7 @@
 Squawk
 ======
 
-Squawk is a minimalistic 8-bit software synthesizer & playroutine library for Arduino.
+Squawk is a *minimalistic 8-bit software synthesizer & playroutine* library for Arduino.
 
 The approach to generating sound is very simple - much akin to 80's game consoles.  
 It follows that Squawk sounds very much like an old-school 8-bit video game.
@@ -35,21 +35,22 @@ If you are unfamiliar with trackers, you will need to refer to the manual for th
 
 There are many modern trackers that are capable of composing music in this format.
 These are a few:
-* OpenMPT
-* Milkytracker
+
+* OpenMPT http://openmpt.org/
+* MilkyTracker http://www.milkytracker.org/
 
 ### Tracking rules
 
 When tracking your music, start with `template/template.mod`, and follow a few additional rules.
 
 1. Do not modify the template instruments/samples
-2. Only use instrument 1 in channel 1, 2 in ch. 2, and so on
+2. Only use instrument/sample 1 in channel 1, 2 in ch. 2, and so on
 3. Only use even numbers for parameters on volume related commands
 4. Don't use advanced looping (regular jumps/breaks are ok)
 5. Don't change tempo (changing speed is ok)
 6. Put no more than 64 patterns in your pattern list
 
-Have a look at the music in `convert/music` for example ProTracker modules.
+Have a look at the music in `convert/music` for example well-formed ProTracker modules.
 
 Getting your music onto your Arduino
 ------------------------------------
