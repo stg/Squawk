@@ -121,8 +121,8 @@ Digital output from a microcontroller is usually not perfectly clean:
 
 Therefore it is not a bad idea to add low-pass filtering even when using a resistor ladder.
 
-Audible noise
--------------
+Reducing noise
+--------------
 
 Any noise in the power supply or from the microcontroller itself will propagate to the audio output.
 
