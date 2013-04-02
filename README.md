@@ -81,4 +81,31 @@ It is also possible to connect output to a speaker system, but this requires a f
                    20nF___
     GND   ______________|__________ AUDIO GND
 
-This is a first order low-pass filter to "smooth out" the PWM carrier frequency.
+This is a first order ~8kHz low-pass filter to "smooth out" the PWM carrier frequency.
+
+The maximum PWM frequency for 8-bit output on a 16MHz Arduino is 62.5kHz.  
+This is relatively close to audible frequencies (0-20kHz) which makes it difficult to filter out.  
+There is also some distortion due to interference between the sample rate and carrier frequency.
+
+Both of these problems can be alleviated by using an R-2R resistor ladder.  
+This is only supported on ATmega168 & ATmega328 devices.  
+See http://en.wikipedia.org/wiki/Resistor_ladder for more information.
+
+    AUDIO OUT __| |_________              2kΩ
+                | |    1kΩ  |___________/\/\/\__ PIN 7
+             2kΩ    _/\/\/\_|    1kΩ
+    PIN 6 __/\/\/\_|___________/\/\/\_    2kΩ
+                       1kΩ   _________|_/\/\/\__ PIN 5
+             2kΩ    _/\/\/\_|    1kΩ
+    PIN 4 __/\/\/\_|___________/\/\/\_    2kΩ
+                       1kΩ   _________|_/\/\/\__ PIN 3
+             2kΩ    _/\/\/\_|    1kΩ
+    PIN 2 __/\/\/\_|___________/\/\/\_    2kΩ
+                       1kΩ   _________|_/\/\/\__ PIN 1
+             2kΩ    _/\/\/\_|    2kΩ
+    PIN 0 __/\/\/\_|___________/\/\/\__ GND +AUDIO GND
+
+This will give you a clean signal, with very crisp treble.
+
+To configure your Squawk sketch for this set-up, use the following line:
+`SQUAWK_CONSTRUCT_ISR(SQUAWK_RLD_PORTD)`
