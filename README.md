@@ -3,15 +3,16 @@ Squawk
 
 Squawk is a minimalistic 8-bit software synthesizer & playroutine library for Arduino.
 
-The approach to generating sound is very simple - much akin to 80's game consoles.
+The approach to generating sound is very simple - much akin to 80's game consoles.  
 It follows that Squawk sounds very much like an old-school 8-bit video game.
 
 Why? Because _simple_ is also _fast_.
 
-The library is designed to play music *in the background*.
+The library is designed to play music *in the background*.  
 Simply tell Squawk to start playing, then go about your business and do whatever else you want your sketch to do. The music will keep playing until you tell it to stop.
 
-Depending on the sample rate (quality), Squawk will use between 10% and 40% of the average Arduino CPU time. That leaves you with plenty of room to run your other tasks.
+Depending on the sample rate (quality), Squawk will use between 10% and 40% of the average Arduino CPU time.  
+That leaves you with plenty of room to run your other tasks.
 
 Contributors:
 * Philip Linde - mod conversion, music
@@ -25,8 +26,8 @@ Thanks to:
 Making music for Squawk
 -----------------------
 
-Music is made using a _tracker_ that can handle _ProTracker_ files.
-A _tracker_ is a type of music composing software.
+Music is made using a _tracker_ that can handle _ProTracker_ files.  
+A _tracker_ is a type of music composing software.  
 _ProTracker_ is a tracker that was popular on the Amiga 500.
 
 If you are unfamiliar with trackers, you will need to refer to the manual for the tracker you choose.
