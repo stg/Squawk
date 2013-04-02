@@ -71,6 +71,8 @@ If you have an SD card connected to your Arduino, you can also have the Arduino 
 Building the hardware
 ---------------------
 
+### Using PWM / pulse width modulation
+
 The simplest way of testing things out is to connect a piezo speaker between GND and the chosen output pin (default 3).  
 The `sketches/Squawk_player` sketch is tuned to frequencies suitable for a small boxed piezo speaker.
 
@@ -108,7 +110,7 @@ At this time, this is supported on ATmega168 & ATmega328 devices only.
              2kΩ    _/\/\/\_|    2kΩ
     PIN 0 __/\/\/\_|___________/\/\/\__ GND +AUDIO GND
 
-This will give you a clean signal, with very crisp treble.
+This will give you a cleaner signal, with very crisp treble.
 
 To configure your Squawk sketch for this set-up, use the line  
 `SQUAWK_CONSTRUCT_ISR(SQUAWK_RLD_PORTD)`
@@ -118,3 +120,15 @@ Digital output from a microcontroller is usually not perfectly clean:
 * Ringing - swings in output voltage following level transition
 
 Therefore it is not a bad idea to add low-pass filtering even when using a resistor ladder.
+
+Audible noise
+-------------
+
+Any noise in the power supply or from the microcontroller itself will propagate to the audio output.
+
+This can be reduced by using a clean power supply.
+
+Producing a perfectly clean output signal is not covered by this project, but basically involves:
+* Having a separate clean power supply for...
+* ...buffering the digital outputs
+* Careful filtering of the analog output
