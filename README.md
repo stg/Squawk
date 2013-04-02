@@ -95,7 +95,7 @@ See http://en.wikipedia.org/wiki/Resistor_ladder for more information.
 At this time, this is supported on ATmega168 & ATmega328 devices only.  
 
     AUDIO OUT __| |_________              2kΩ
-                | |    1kΩ  |___________/\/\/\__ PIN 7
+            1µF | |    1kΩ  |___________/\/\/\__ PIN 7
              2kΩ    _/\/\/\_|    1kΩ
     PIN 6 __/\/\/\_|___________/\/\/\_    2kΩ
                        1kΩ   _________|_/\/\/\__ PIN 5
