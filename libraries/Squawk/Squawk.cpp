@@ -183,7 +183,10 @@ void SquawkSynth::begin(uint16_t hz) {
 #endif
     TCCR0A = 0b10000011; // Fast-PWM 8-bit
     TCCR0B = 0b00000001; // 62500Hz
-    OCR0A  = 0x7F;
+    TIMSK0 &= 0b11111110; // Disable overflow interrupt used by
+                          // delay(), millis(), etc. because
+                          // it's too slow to go at 62.5kHz
+    OCR0A  = 0x80;
   } else if(squawk_register == (intptr_t)&OCR0B) {
     // Squawk uses PWM on OCR0B/PC5(ATMega328/168)/PD0(ATMega32U4)
 #ifdef  __AVR_ATmega32U4__
@@ -193,14 +196,17 @@ void SquawkSynth::begin(uint16_t hz) {
 #endif                   // Set timer mode to
     TCCR0A = 0b00100011; // Fast-PWM 8-bit
     TCCR0B = 0b00000001; // 62500Hz
-    OCR0B  = 0x7F;
+    OCR0B  = 0x80;
+    TIMSK0 &= 0b11111110; // Disable overflow interrupt used by
+                          // delay(), millis(), etc. because
+                          // it's too slow to go at 62.5kHz
 #ifdef OCR2A
   } else if(squawk_register == (intptr_t)&OCR2A) {
     // Squawk uses PWM on OCR2A/PB3
     DDRB  |= 0b00001000; // Set timer mode to
     TCCR2A = 0b10000011; // Fast-PWM 8-bit
     TCCR2B = 0b00000001; // 62500Hz
-    OCR2A  = 0x7F;
+    OCR2A  = 0x80;
 #endif
 #ifdef OCR2B
   } else if(squawk_register == (intptr_t)&OCR2B) {
@@ -208,7 +214,7 @@ void SquawkSynth::begin(uint16_t hz) {
     DDRD  |= 0b00001000; // Set timer mode to
     TCCR2A = 0b00100011; // Fast-PWM 8-bit
     TCCR2B = 0b00000001; // 62500Hz
-    OCR2B  = 0x7F;
+    OCR2B  = 0x80;
 #endif
 #ifdef OCR3AL
   } else if(squawk_register == (intptr_t)&OCR3AL) {
@@ -217,27 +223,42 @@ void SquawkSynth::begin(uint16_t hz) {
     TCCR3A = 0b10000001; // Fast-PWM 8-bit
     TCCR3B = 0b00001001; // 62500Hz
     OCR3AH = 0x00;
-    OCR3AL = 0x7F;
+    OCR3AL = 0x80;
 #endif
+#ifdef SQUAWK_SPI
   } else if(squawk_register == (intptr_t)&SPDR) {
-    // NOT YET SUPPORTED
     // Squawk uses external DAC via SPI
+    // NOT YET SUPPORTED
     // TODO: Configure SPI
     // TODO: Needs SS toggle in sample grinder
+#endif
+#ifdef SQUAWK_RLD_PORTB
   } else if(squawk_register == (intptr_t)&PORTB) {
-    // NOT YET SUPPORTED
     // Squawk uses resistor ladder on PORTB
-    // TODO: Needs shift right in sample grinder
-    DDRB   = 0b11111111;
-  } else if(squawk_register == (intptr_t)&PORTC) {
     // NOT YET SUPPORTED
+    // TODO: Needs bit shuffling in sample grinder
+    DDRB   = 0b11111111;
+#endif
+#ifdef SQUAWK_RLD_PORTC
+  } else if(squawk_register == (intptr_t)&PORTC) {
     // Squawk uses resistor ladder on PORTC
-    // TODO: Needs shift right in sample grinder
+    // NOT YET SUPPORTED
+    // TODO: Needs bit shuffling in sample grinder
     DDRC   = 0b11111111;
+#endif
+#ifdef SQUAWK_RLD_PORTD
+  } else if(squawk_register == (intptr_t)&PORTD) {
+    // Squawk uses resistor ladder on PORTD
+    // If USART is used by invoking Serial.begin():
+    //   Output is 6bit on PD2-PD7 (pin 2-7)
+    // Otherwise:
+    //   Output is 8bit on PD0-PD7 (pin 0-7)
+    DDRD   = 0b11111111;
+#endif
   }
 
-  // Seed LFSR (needed for noise)
-  osc[3].freq = 0x2000;
+  // Seed LFSR
+  osc[3].freq = 0x0001;
 
   // Set up ISR to run at sample_rate (may not be exact)
   isr_rr = F_CPU / sample_rate;

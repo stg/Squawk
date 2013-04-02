@@ -93,6 +93,7 @@ extern uint8_t pcm;
 #define SQUAWK_PWM_PIN5  OCR0B
 #define SQUAWK_PWM_PIN11 OCR2A
 #define SQUAWK_PWM_PIN3  OCR2B
+#define SQUAWK_RLD_PORTD PORTD
 #endif
 
 #ifdef __AVR_ATmega328P__
@@ -101,6 +102,7 @@ extern uint8_t pcm;
 #define SQUAWK_PWM_PIN5  OCR0B
 #define SQUAWK_PWM_PIN11 OCR2A
 #define SQUAWK_PWM_PIN3  OCR2B
+#define SQUAWK_RLD_PORTD PORTD
 #endif
 
 /*
