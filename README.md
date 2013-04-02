@@ -1,4 +1,4 @@
-Squawk
+﻿Squawk
 ======
 
 Squawk is a **minimalistic 8-bit software synthesizer & playroutine** library for Arduino.
@@ -19,15 +19,15 @@ Contributors:
 
 Thanks to:
 * Fredrik Ericsson
-* Linus �kesson
+* Linus Åkesson
 * David Cuartielles
 
 Making music for Squawk
 -----------------------
 
 Music is made using a _tracker_ that can handle _ProTracker_ files.  
-A _tracker_ is a type of music composing software.  
-_ProTracker_ is a tracker that was popular on the Amiga 500.
+* A _tracker_ is a type of music composing software.  
+* _ProTracker_ is a tracker that was popular on the Amiga 500.
 
 If you are unfamiliar with trackers, you will need to refer to the manual for the tracker you choose.
 
@@ -76,9 +76,9 @@ The `sketches/Squawk_player` sketch is tuned to frequencies suitable for a small
 
 It is also possible to connect output to a speaker system, but this requires a few additional components:
 
-    PIN 3 ____1 Kohm________| |____ AUDIO OUT
-              \/\/\/   _|_  | | 1uF
-                  20 nF___
+    PIN 3 ____/\/\/\________| |____ AUDIO OUT
+               1kΩ     _|_  | | 1µF
+                   20nF___
     GND   ______________|__________ AUDIO GND
 
 This is a first order low-pass filter to "smooth out" the PWM carrier frequency.
