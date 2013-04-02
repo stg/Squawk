@@ -1,14 +1,14 @@
 Squawk
 ======
 
-Squawk is a *minimalistic 8-bit software synthesizer & playroutine* library for Arduino.
+Squawk is a **minimalistic 8-bit software synthesizer & playroutine** library for Arduino.
 
 The approach to generating sound is very simple - much akin to 80's game consoles.  
 It follows that Squawk sounds very much like an old-school 8-bit video game.
 
 Why? Because _simple_ is also _fast_.
 
-The library is designed to play music *in the background* - simply tell Squawk to start playing, then go about your business and do whatever else you want your sketch to do. The music will keep playing until you tell it to stop.
+The library is designed to play music **in the background** - simply tell Squawk to start playing, then go about your business and do whatever else you want your sketch to do. The music will keep playing until you tell it to stop.
 
 Depending on the sample rate (quality), Squawk will use between 10% and 40% of the average Arduino CPU time.  
 That leaves you with plenty of room to run your other tasks.
