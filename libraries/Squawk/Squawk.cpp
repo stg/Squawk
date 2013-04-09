@@ -128,7 +128,7 @@ static int8_t do_osc(pto_t *p_osc) {
 // Essentially finds period of current note + halftones
 static inline uint16_t arpeggio(uint8_t ch, uint8_t halftones) {
   uint8_t n;
-  for(n = 0; n != 47; n++) {
+  for(n = 0; n != 83; n++) {
     if(fxm[ch].period >= pgm_read_word(&period_tbl[n])) break;
   }
   return pgm_read_word(&period_tbl[MIN(n + halftones, 47)]);
