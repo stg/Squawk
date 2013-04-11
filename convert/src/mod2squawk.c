@@ -354,7 +354,7 @@ int main(int argc,char**argv) {
             }
           }           
           if((fxp[3] >> 4) >= (fxp[3] & 0x0F)) {
-            fxp[3] = 0x80 + ((fxp[3] >> 4) - (fxp[3] & 0x0F));
+            fxp[3] = 0x08 + ((fxp[3] >> 4) - (fxp[3] & 0x0F));
           } else {
             fxp[3] = ((fxp[3] & 0x0F) - (fxp[3] >> 4));
           }
