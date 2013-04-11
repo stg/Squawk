@@ -14,7 +14,7 @@
 #define HI4(V)    (((V) & 0xF0) >> 4)
 #define MIN(A, B) ((A) < (B) ? (A) : (B))
 #define MAX(A, B) ((A) > (B) ? (A) : (B))
-#define FREQ(PERIOD) (tuning_long / (PERIOD))
+#define FREQ(PERIOD) (p_fxm->tune + tuning_long / (PERIOD))
 
 // SquawkStream class for PROGMEM data
 class StreamROM : public SquawkStream {
@@ -49,6 +49,7 @@ typedef struct {
   pto_t     trem;
   uint16_t  period;
   uint8_t   param;
+  int8_t    tune;
 } fxm_t;
 
 // Locals
@@ -503,6 +504,9 @@ void squawk_playroutine() {
             break;
           case 0xE4: // Set vibrato waveform
             p_fxm->vibr.mode = fxp;
+            break;
+          case 0xE5: // Set fine tune
+            p_fxm->tune = (fxp & 0x8) ? fxp - 0x10 : fxp;
             break;
           case 0xE7: // Set tremolo waveform
             p_fxm->trem.mode = fxp;
