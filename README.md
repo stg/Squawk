@@ -14,10 +14,12 @@ Depending on the sample rate (quality), Squawk will use between 10% and 40% of t
 That leaves you with plenty of room to run your other tasks.
 
 Contributors:
-* Philip Linde - _mod conversion, music_
+* Niklas "Salkinitzor" Ström - _music_
+* Philip "Rubberhands" Linde - _mod conversion, music_
 * Davey Taylor - _the rest_
 
 Thanks to:
+* Xun Yang
 * Fredrik Ericsson
 * Linus Åkesson
 * David Cuartielles

@@ -325,7 +325,7 @@ int main(int argc,char**argv) {
         } else if(fxc[chn] == 0x80) {
           printf("[%02X][%02X][%01X] Panning not supported\n", ptn, row, chn);
         } else if(fxc[chn] == 0xE5) {
-          printf("[%02X][%02X][%01X] Fine-tune not supported\n", ptn, row, chn);
+          printf("[%02X][%02X][%01X] Fine-tune is wonky by design\n", ptn, row, chn);
         } else if(fxc[chn] == 0xE6) {
           printf("[%02X][%02X][%01X] Advanced looping not supported\n", ptn, row, chn);
         } else if(fxc[chn] == 0xE8) {
