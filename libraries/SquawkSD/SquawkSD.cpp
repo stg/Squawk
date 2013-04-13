@@ -107,7 +107,7 @@ void SquawkSynthSD::convert(File in, File out) {
         case 0x50: case 0x60: case 0xA0:
           fxc[3] = 0x1;
           if((fxp[3] >> 4) >= (fxp[3] & 0x0F)) {
-            fxp[3] = 0x80 + ((fxp[3] >> 4) - (fxp[3] & 0x0F));
+            fxp[3] = 0x08 + ((fxp[3] >> 4) - (fxp[3] & 0x0F));
           } else {
             fxp[3] = ((fxp[3] & 0x0F) - (fxp[3] >> 4));
           }
