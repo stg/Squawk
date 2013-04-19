@@ -1,6 +1,8 @@
 /**
 SquawkSD16
 
+Author: Xun Yang
+
 Similar to SquawkSD, while this one replaces 
 the standard SD to Fat16. It leads to a reduced
 compile size(5k bytes). It's especially suitable
@@ -14,8 +16,7 @@ sd card and file. See the example
 
 Website for Fat16 https://code.google.com/p/fat16lib/
 
-Note: convert() is disabled here. May get fixed in
-the future.
+Note: convert() is not available in this version.
 */
 #ifndef _SQUAWKSD_H_
 #define _SQUAWKSD_H_
@@ -28,7 +29,6 @@ class SquawkSynthSD16 : public SquawkSynth {
 	public:
 	  inline void play() { Squawk.play(); };
 		void play(Fat16 file);
-		//void convert(Fat16 in, Fat16 out);
 };
 
 extern SquawkSynthSD16 SquawkSD;

@@ -1,5 +1,7 @@
-/**
+/**
 SquawkSD16 using Fat16 library
+
+Author: Xun Yang
 
 Fat16 is a bit limited comparing to standard SD, but much slimer.
 Website for Fat16 https://code.google.com/p/fat16lib/
@@ -51,13 +53,13 @@ void setup() {
   // Squawk always steals Timer1 for sample crunching.
   SquawkSD.begin(32000);
   // Initialize the SD card  
-  if(card.init()){
+  if(card.init()) {
     // Open a file on the SD card
-    if(file.init(&card)){
+    if(file.init(&card)) {
       // Begin playback of file
-      if(file.open("Melody.sqm",O_READ)){
+      if(file.open("Melody.sqm", O_READ)) {
         SquawkSD.play(file);
-        return ;
+        return;
       }
     }
   }
