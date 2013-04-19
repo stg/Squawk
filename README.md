@@ -14,9 +14,10 @@ Depending on the sample rate (quality), Squawk will use between 10% and 40% of t
 That leaves you with plenty of room to run your other tasks.
 
 Contributors:
+* Davey Taylor - _squawk_
+* Xun Yang - _small footprint implementation using fat16-library_
 * Niklas "Salkinitzor" Ström - _music_
 * Philip "Rubberhands" Linde - _mod conversion, music_
-* Davey Taylor - _the rest_
 
 Thanks to:
 * Xun Yang
