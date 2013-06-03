@@ -121,15 +121,17 @@ To configure your Squawk sketch for this set-up, use the line
 Digital output from a microcontroller is usually not perfectly clean:
 * Glitches - differences in switching time between pins
 * Ringing - swings in output voltage following level transition
+* Noise - "random" voltage fluctuations due to internal operation
 
 Therefore it is not a bad idea to add low-pass filtering even when using a resistor ladder.
+This will reduce glitches and ringing. Noise is harder to deal with.
 
 Reducing noise
 --------------
 
 Any noise in the power supply or from the microcontroller itself will propagate to the audio output.
 
-This can be reduced by using a clean power supply.
+Power supply noise can be reduced by using a clean power supply.
 
 Producing a perfectly clean output signal is not covered by this project, but basically involves:
 * Having a separate clean power supply for...
