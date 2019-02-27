@@ -28,6 +28,8 @@ protected:
 public:
   SquawkSynth() {};
 
+  void beginEx(uint16_t sample_rate);
+
   // Initialize Squawk to generate samples at sample_rate Hz
   void begin(uint16_t sample_rate);
 
@@ -79,6 +81,7 @@ extern uint8_t pcm;
 #define SQUAWK_PWM_PIN5  OCR3AL
 #define SQUAWK_PWM_PIN11 OCR0A
 #define SQUAWK_PWM_PIN3  OCR0B
+//#define SQUAWK_ARDUBOY   OCR4A
 /*
 // NOT SUPPORTED YET
 #define SQUAWK_PWM_PIN6  OCR4D
@@ -118,9 +121,12 @@ extern void squawk_playroutine() asm("squawk_playroutine");
 // generates samples and updates oscillators
 // uses 132 cycles (not counting playroutine)
 //     ~1/3 CPU @ 44kHz on 16MHz
+
+//ISR(TIMER4_OVF_vect, ISR_NAKED) { // For Arduboy
 #define SQUAWK_CONSTRUCT_ISR(TARGET_REGISTER) \
-uint16_t cia, cia_count; \
-intptr_t squawk_register = (intptr_t)&TARGET_REGISTER; \
+uint16_t cia __attribute__((used)); \
+uint16_t cia_count __attribute__((used)); \
+intptr_t squawk_register __attribute__((used)) = (intptr_t)&TARGET_REGISTER; \
 ISR(TIMER1_COMPA_vect, ISR_NAKED) { \
   asm volatile( \
     "push r2                                          " "\n\t" \
